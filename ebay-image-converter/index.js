@@ -3,11 +3,17 @@ const { exec } = require('child_process');
 
 const express = require('express')
 const cors = require('cors');
+const { createHash } = require('crypto');
 const bodyParser = require('body-parser');
 const { OUT_DIR, transferLogo, WORK_DIR, getFileExtension } = require('./logo-transfer');
 const { createWriteStream, rm, rmSync } = require('fs');
 
 console.log(new Date().toISOString())
+
+
+const VERIFICATION_TOKEN = "t9v-t7i8o7_tiu-r7ihl37iGLg_L43423";
+const ENDPOINT = "https://92d3-90-138-230-168.ngrok.io";
+
 
 async function downloadFile(fileUrl, outputLocationPath) {
     const writer = createWriteStream(outputLocationPath);
@@ -94,9 +100,65 @@ const port = 3253;
 app.post('/', async (req, res) => {
     console.log(req.body);
     const { companyName, images } = req.body;
+    if (!images || !companyName) res.sendStatus(200);
     const newImages = await proceedImages(companyName, images);
     res.send(newImages);
 });
+
+
+app.get('/', async (req, res) => {
+    const challengeCode = req.query.challenge_code;
+    if (!challengeCode) {
+        res.send({})
+        return;
+    }
+    console.log(challengeCode);
+    const hash = createHash('sha256');
+    hash.update(challengeCode);
+    hash.update(VERIFICATION_TOKEN);
+    hash.update(ENDPOINT);
+    const responseHash = hash.digest('hex');
+    console.log({
+        challengeResponse: new Buffer.from(responseHash).toString()
+    })
+    res.json({
+        challengeResponse: new Buffer.from(responseHash).toString()
+    })
+})
+
+app.get('/accepted', async (req, res) => {
+    console.log(req.body, req.query);
+    res.redirect('https://www.ebay.com');
+})
+
+app.post('/accepted', async (req, res) => {
+    console.log(req.body, req.query);
+    res.redirect('https://www.ebay.com');
+})
+
+app.post('/redirect', async (req, res) => {
+    console.log(req.body);
+    try {
+
+        const response = await axios({
+            url: req.body.url,
+            method: req.body.method,
+            data: req.body.data,
+            params: req.query,
+            headers: req.body.headers
+        });
+        res.json({
+            status: response.status,
+            statusText: response.statusText,
+            data: response.data
+        });
+    }
+    catch (e) {
+        console.log(e?.response?.data?.errors);
+        res.json(e?.response?.data);
+    }
+})
+
 
 app.listen(port, () => {
     console.log(`Example app listening on port http://localhost:${port}`)
