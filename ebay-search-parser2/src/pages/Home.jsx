@@ -1,0 +1,175 @@
+import { useRef } from "react";
+import { useEffect, useState } from "react";
+import { utils, writeFile } from "xlsx";
+import "../App.css";
+import ClipboardWrapper from "../components/clipboard-wrapper";
+import Loading from "../components/loading";
+import Policies from "../components/policies";
+import Table from "../components/table";
+import { useAuthApi } from "../contexts/AuthApiContext";
+import { REQUEST_TYPES, useProducts } from "../contexts/ProductsContext";
+
+function Home() {
+    const tableRef = useRef();
+    const { apiToken, setApiToken } = useAuthApi();
+    const [currentRequest, setCurrentRequest] = useState(null);
+    const [pagesCount, setPagesCount] = useState(1);
+    const [withDetails, setWithDetails] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [searchData, setSearchData] = useState(undefined);
+
+    const {
+        productsRaw,
+        fetchProductRaw,
+        fetchSellerProductsRaw,
+        fetchConvertedImages,
+        fetchProductsApiFromCurrentRaw,
+    } = useProducts();
+
+    useEffect(() => {
+        document.body.style.overflowY = loading ? "hidden" : "auto";
+    });
+
+    console.log(withDetails);
+
+    const handleConvertImages = async () => {
+        setLoading(true);
+        await fetchConvertedImages(searchData, currentRequest);
+        setLoading(false);
+    };
+
+    const handleSearch = async () => {
+        if (!searchData || searchData === "" || !apiToken) return;
+        setLoading(true);
+        switch (currentRequest) {
+            case REQUEST_TYPES.search:
+                await fetchProductRaw(searchData, withDetails);
+                break;
+            case REQUEST_TYPES.seller:
+                await fetchSellerProductsRaw(
+                    searchData,
+                    pagesCount,
+                    withDetails
+                );
+                break;
+            default:
+                console.log("Nothing selected");
+                break;
+        }
+        await fetchProductsApiFromCurrentRaw();
+        setLoading(false);
+    };
+
+    const handleExport = () => {
+        const wb = utils.table_to_book(document.getElementById("mainTable"));
+        writeFile(wb, `${searchData}_book.xlsx`);
+    };
+
+    return (
+        <div className="App">
+            <Loading loading={loading} />
+            <div style={styles.spaceBox}>
+                <div>
+                    <div style={styles.centerBox}>
+                        <input
+                            type="text"
+                            value={searchData}
+                            onChange={(e) => setSearchData(e.target.value)}
+                        />
+                        <button onClick={() => handleSearch()}>Search</button>
+                    </div>
+                    <div style={styles.centerBox}>
+                        <input
+                            id="details"
+                            name="details"
+                            type="number"
+                            checked={pagesCount}
+                            onChange={(e) => setPagesCount(e.target.value)}
+                        />
+                        <label for="details">Number of pages</label>
+                    </div>
+                    <div style={styles.centerBox}>
+                        <input
+                            id="details"
+                            name="details"
+                            type="checkbox"
+                            checked={withDetails}
+                            onChange={(e) => setWithDetails(e.target.checked)}
+                        />
+                        <label for="details">
+                            Check for details (takes much more time)
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <div>
+                        <input
+                            type="radio"
+                            name="request-type"
+                            id="request-type-1"
+                            value={REQUEST_TYPES.search}
+                            onChange={(e) =>
+                                e.target.checked
+                                    ? setCurrentRequest(e.target.value)
+                                    : undefined
+                            }
+                        />
+                        <label for="request-type-1">Search request</label>
+                        <input
+                            type="radio"
+                            name="request-type"
+                            id="request-type-2"
+                            value={REQUEST_TYPES.seller}
+                            onChange={(e) =>
+                                e.target.checked
+                                    ? setCurrentRequest(e.target.value)
+                                    : undefined
+                            }
+                        />
+                        <label for="request-type-2">Seller request</label>
+                        <div>
+                            <button onClick={() => handleConvertImages()}>
+                                Convert images
+                            </button>
+                        </div>
+                        <div>
+                            <label htmlFor="private_token">
+                                Your DevAPI Private token
+                            </label>
+                            <input
+                                type="text"
+                                name="private_token"
+                                id=""
+                                value={apiToken}
+                                onChange={(e) => setApiToken(e.target.value)}
+                            />
+                        </div>
+                        <Policies/>
+                    </div>
+                </div>
+            </div>
+            <div style={styles.centerBox}>
+                <button onClick={() => handleExport()}>Export</button>
+            </div>
+            <h1>Hello world!</h1>
+            <ClipboardWrapper>
+                <Table
+                    apiToken={apiToken}
+                    withDetails={withDetails}
+                    ref={tableRef}
+                    items={productsRaw}
+                />
+            </ClipboardWrapper>
+        </div>
+    );
+}
+
+const styles = {
+    centerBox: { display: "flex", justifyContent: "flex-start" },
+    spaceBox: {
+        display: "flex",
+        justifyContent: "space-around",
+    },
+};
+
+export default Home;

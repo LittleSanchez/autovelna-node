@@ -1,0 +1,39 @@
+{
+  "product": {
+    "title": "Test listing - do not bid or buy - awesome Apple watch test 2",
+    "aspects": {
+      "Brand": [
+        "GoPro"
+      ],
+      "Storage Type": [
+        "Removable"
+      ]
+    },
+    "description": "Test listing - do not bid or buy \n Built-in GPS. Water resistance to 50 meters.1 A new lightning-fast dual-core processor. And a display that’s two times brighter than before. Full of features that help you stay active, motivated, and connected, Apple Watch Series 2 is designed for all the ways you move ",
+    "upc": [
+      "888462079525"
+    ],
+    "imageUrls": [
+      "http://store.storeimages.cdn-apple.com/4973/as-images.apple.com/is/image/AppleInc/aos/published/images/S/1/S1/42/S1-42-alu-silver-sport-white-grid?wid=332&hei=392&fmt=jpeg&qlt=95&op_sharpen=0&resMode=bicub&op_usm=0.5,0.5,0,0&iccEmbed=0&layer=comp&.v=1472247758975",
+      "http://store.storeimages.cdn-apple.com/4973/as-images.apple.com/is/image/AppleInc/aos/published/images/4/2/42/stainless/42-stainless-sport-white-grid?wid=332&hei=392&fmt=jpeg&qlt=95&op_sharpen=0&resMode=bicub&op_usm=0.5,0.5,0,0&iccEmbed=0&layer=comp&.v=1472247760390",
+      "http://store.storeimages.cdn-apple.com/4973/as-images.apple.com/is/image/AppleInc/aos/published/images/4/2/42/ceramic/42-ceramic-sport-cloud-grid?wid=332&hei=392&fmt=jpeg&qlt=95&op_sharpen=0&resMode=bicub&op_usm=0.5,0.5,0,0&iccEmbed=0&layer=comp&.v=1472247758007"
+    ]
+  },
+  "packageWeightAndSize": {
+    "dimensions": {
+      "height": 5,
+      "length": 10,
+      "width": 15,
+      "unit": "INCH"
+    },
+    "weight": {
+      "value": 2,
+      "unit": "POUND"
+    }
+  },
+  "availability": {
+    "shipToLocationAvailability": {
+      "quantity": 10
+    }
+  }
+}

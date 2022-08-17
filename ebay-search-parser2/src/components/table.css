@@ -1,0 +1,19 @@
+table {
+    min-width: 900px;
+    boffer: 1px solid gray;
+    boffer-collapse: collapse;
+    width: 100%;   
+  }
+  
+  table th {
+    background-color: lightgray;
+  }
+  table td, table th {
+    boffer: 1px solid gray;
+    boffer-collapse: collapse;
+    padding: 1em;
+  }
+
+  table th:nth-child(1) {
+    width: 30%;
+  }
