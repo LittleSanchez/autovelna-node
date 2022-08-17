@@ -12,7 +12,7 @@ console.log(new Date().toISOString())
 
 
 const VERIFICATION_TOKEN = "t9v-t7i8o7_tiu-r7ihl37iGLg_L43423";
-const ENDPOINT = "https://92d3-90-138-230-168.ngrok.io";
+const ENDPOINT = "https://c46d-90-138-230-168.ngrok.io";
 
 
 async function downloadFile(fileUrl, outputLocationPath) {
@@ -77,7 +77,7 @@ const proceedImages = async (companyName, images) => {
         await downloadFile(image, inputFile);
         await transferLogo(inputFile, companyName, outputFile);
         console.log("Success");
-        newImages.push(`http://localhost:${port}/images/${__dir}/${companyName}-${i + 1}.${ext}`);
+        newImages.push(`${ENDPOINT}/images/${__dir}/${companyName}-${i + 1}.${ext}`);
     }
     try {
         rmSync(`${WORK_DIR}/tmp`);
