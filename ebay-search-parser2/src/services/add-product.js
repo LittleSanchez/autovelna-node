@@ -17,7 +17,7 @@ export const InventoryAPI = {
     withdrawOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}/withdraw`,
 }
 
-export const SKU = (mpn) => `av-${mpn.replace('/ ', '_')}`;
+export const SKU = (mpn) => `av-${mpn.replace(/[\s/]+/g, '_')}`;
 
 export const AxiosHeaders = (token) => ({
     "Authorization": 'Bearer ' + token,
@@ -30,6 +30,7 @@ const convertCompatibilities = (rawCompatibilities) => {
     const result = {
         compatibleProducts: []
     }
+    if (!properties) return result;
     for (let prop of properties) {
         const newCompatibility = {
             note: '',
@@ -218,14 +219,14 @@ export const addProduct = async ({ productRaw, productCompatibility, offerRaw, t
     console.log("Raw offer data: ", offerRaw);
     const offerData = await generateoffer(productRaw, inventoryItem, offerRaw);
     console.log("Ready offer data: ", offerData);
-    const {data} = await fetchCreateOffer(offerData, SKU(inventoryItem.product.mpn), AxiosHeaders(token));
+    const { data } = await fetchCreateOffer(offerData, SKU(inventoryItem.product.mpn), AxiosHeaders(token));
     return data.offerId;
 }
 
 export const deleteProduct = async ({ productRaw, token }) => {
     const mpn = productRaw?.aspects.Herstellernummer[0];
     console.log("MPN: ", mpn)
-    const sku = 'av-' + mpn;
+    const sku = SKU(mpn);
     console.log("SKU: ", sku);
     const offerResponse = await fetchGetOfferId(sku, AxiosHeaders(token));
     const offerId = offerResponse.data.offers[0].offerId;
@@ -234,10 +235,10 @@ export const deleteProduct = async ({ productRaw, token }) => {
 
 }
 
-export const publishOffer = async ({offerId, token}) => {
+export const publishOffer = async ({ offerId, token }) => {
     await fetchPublishOffer(offerId, AxiosHeaders(token));
 }
 
-export const withdrawOffer = async ({offerId, token}) => {
+export const withdrawOffer = async ({ offerId, token }) => {
     await fetchWithdrawOffer(offerId, AxiosHeaders(token));
 }

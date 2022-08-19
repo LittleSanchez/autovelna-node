@@ -3,16 +3,19 @@ import { useEffect, useState } from "react";
 import { utils, writeFile } from "xlsx";
 import "../App.css";
 import ClipboardWrapper from "../components/clipboard-wrapper";
+import FileLoader from "../components/fileLoader";
 import Loading from "../components/loading";
 import Policies from "../components/policies";
 import Table from "../components/table";
 import { useAuthApi } from "../contexts/AuthApiContext";
 import { REQUEST_TYPES, useProducts } from "../contexts/ProductsContext";
+import { downloadFile } from "../services/downloadData";
 
 function Home() {
     const tableRef = useRef();
     const { apiToken, setApiToken } = useAuthApi();
     const [currentRequest, setCurrentRequest] = useState(null);
+    const [startPage, setStartPage] = useState(1);
     const [pagesCount, setPagesCount] = useState(1);
     const [withDetails, setWithDetails] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -20,10 +23,15 @@ function Home() {
 
     const {
         productsRaw,
+        setProductsRaw,
         fetchProductRaw,
         fetchSellerProductsRaw,
         fetchConvertedImages,
         fetchProductsApiFromCurrentRaw,
+        fetchAddAllProducts,
+        fetchDeleteAllProducts,
+        fetchPublishAllOffers,
+        fetchWithdrawAllOffers,
     } = useProducts();
 
     useEffect(() => {
@@ -65,6 +73,33 @@ function Home() {
         writeFile(wb, `${searchData}_book.xlsx`);
     };
 
+    const handleAddAll = async () => {
+        await fetchAddAllProducts();
+        downloadFile(
+            {
+                startPage,
+                pagesCount,
+                finishedDate: new Date().toISOString(),
+            },
+            `info-${new Date().toISOString().replace(/:/g, '-')}`
+        );
+    };
+    const handleDeleteAll = async () => {
+        await fetchDeleteAllProducts();
+    };
+
+    const handlePublishAll = async () => {
+        await fetchPublishAllOffers();
+    };
+
+    const handleWithdrawAll = async () => {
+        await fetchWithdrawAllOffers();
+    };
+
+    const handleProductsFileLoaded = async (data) => {
+        setProductsRaw(data);
+    }
+
     return (
         <div className="App">
             <Loading loading={loading} />
@@ -77,6 +112,16 @@ function Home() {
                             onChange={(e) => setSearchData(e.target.value)}
                         />
                         <button onClick={() => handleSearch()}>Search</button>
+                    </div>
+                    <div style={styles.centerBox}>
+                        <input
+                            id="details"
+                            name="details"
+                            type="number"
+                            checked={startPage}
+                            onChange={(e) => setStartPage(e.target.value)}
+                        />
+                        <label for="details">Start from page</label>
                     </div>
                     <div style={styles.centerBox}>
                         <input
@@ -100,6 +145,19 @@ function Home() {
                             Check for details (takes much more time)
                         </label>
                     </div>
+                    <div>
+                        <FileLoader onFileLoad={handleProductsFileLoaded}/>
+                    </div>
+                    <button onClick={() => handleAddAll()}>Add All</button>
+                    <button onClick={() => handleDeleteAll()}>
+                        Delete All
+                    </button>
+                    <button onClick={() => handlePublishAll()}>
+                        Publish All
+                    </button>
+                    <button onClick={() => handleWithdrawAll()}>
+                        Withdraw All
+                    </button>
                 </div>
                 <div>
                     <div>
@@ -144,7 +202,7 @@ function Home() {
                                 onChange={(e) => setApiToken(e.target.value)}
                             />
                         </div>
-                        <Policies/>
+                        <Policies />
                     </div>
                 </div>
             </div>

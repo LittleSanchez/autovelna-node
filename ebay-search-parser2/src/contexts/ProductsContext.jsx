@@ -9,6 +9,7 @@ import {
     publishOffer,
     withdrawOffer,
 } from "../services/add-product";
+import { downloadFile } from "../services/downloadData";
 import {
     fetchCompability,
     getConvertedImages,
@@ -54,10 +55,17 @@ const ProductsContextProvider = ({ children }) => {
 
     const appendProductOffer = (productId, offerId) => {
         const newProductOffer = {
-            [productId]: offerId
+            [productId]: offerId,
         };
-        setProductOffers({...productOffers, ...newProductOffer})
-    }
+        setProductOffers({ ...productOffers, ...newProductOffer });
+    };
+
+    useEffect(() => {
+        downloadFile(
+            productsRaw,
+            `search-results-${new Date().toISOString().replace(/:/g, "-")}.json`
+        );
+    }, [productsRaw]);
 
     const offerRaw = useOffer();
 
@@ -75,7 +83,9 @@ const ProductsContextProvider = ({ children }) => {
 
     const fetchProductRaw = async (searchData, withDetails) => {
         try {
-            setProductsRaw(await getData(searchData, withDetails));
+            const productRawData = await getData(searchData, withDetails);
+            console.log(productRawData);
+            setProductsRaw(productRawData);
         } catch (e) {
             console.error(e);
         }
@@ -145,27 +155,54 @@ const ProductsContextProvider = ({ children }) => {
                 productId,
                 compatibilityToken
             );
-            return await addProduct({
+            const offerId = await addProduct({
                 productRaw: productsRaw.find((x) => x.id === productId),
                 productCompatibility: productCompatibility,
                 offerRaw: offerRaw,
                 token: apiToken,
             });
+            // setProductOffers({
+            //     ...productOffers,
+            //     [productId]: offerId,
+            // });
+            return offerId;
         } catch (e) {
             console.error(e);
+            return e;
         }
     };
 
     const fetchAddAllProducts = async () => {
+        const successfulProducts = [];
+        const erroredProducts = [];
         const offerIds = {};
         for (let product of productsRaw) {
             const offerId = await fetchAddProductById(product.id);
-            if (offerId){
+            if (offerId && typeof offerId !== "object") {
                 console.log("Adding offer Id: ", offerId);
                 offerIds[product.id] = offerId;
+                successfulProducts.push({
+                    productRaw: product,
+                    offerId,
+                });
+            } else {
+                erroredProducts.push({
+                    productRaw: product,
+                    error: offerId,
+                });
             }
         }
         console.log("All ready offers: ", offerIds);
+        console.log("Successful Products: ", successfulProducts);
+        console.log("Errored products: ", erroredProducts);
+        await downloadFile(
+            successfulProducts,
+            `successful-${new Date().toISOString().replace(/:/g, "-")}.json`
+        );
+        await downloadFile(
+            erroredProducts,
+            `errored-${new Date().toISOString().replace(/:/g, "-")}.json`
+        );
         setProductOffers(offerIds);
     };
 

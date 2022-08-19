@@ -17,10 +17,6 @@ const Table = ({ withDetails, ref, privateToken }) => {
         fetchDeleteProductById,
         fetchPublishOfferById,
         fetchWithdrawOfferById,
-        fetchAddAllProducts,
-        fetchDeleteAllProducts,
-        fetchPublishAllOffers,
-        fetchWithdrawAllOffers,
     } = useProducts();
     const [compabilityProductId, setCompabilityProductId] =
         useState(COMPABILITY_CLOSED);
@@ -40,31 +36,11 @@ const Table = ({ withDetails, ref, privateToken }) => {
         });
     };
 
-    const handleAddAll = async () => {
-        await fetchAddAllProducts();
-    };
-    const handleDeleteAll = async () => {
-        await fetchDeleteAllProducts();
-    };
-
-    
-    const handlePublishAll = async () => {
-        await fetchPublishAllOffers();
-    };
-
-    
-    const handleWithdrawAll = async () => {
-        await fetchWithdrawAllOffers();
-    };
-
     
 
     return (
         <div>
-            <button onClick={() => handleAddAll()}>Add All</button>
-            <button onClick={() => handleDeleteAll()}>Delete All</button>
-            <button onClick={() => handlePublishAll()}>Publish All</button>
-            <button onClick={() => handleWithdrawAll()}>Withdraw All</button>
+            
             <table id="mainTable" ref={ref}>
                 <thead>
                     <tr>
