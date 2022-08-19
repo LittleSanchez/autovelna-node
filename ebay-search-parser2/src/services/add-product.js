@@ -1,6 +1,6 @@
 import axios from "axios";
+import { REDIRECT_URL } from "../consts/api";
 
-const REDIRECT_URL = 'http://localhost:4444/redirect'
 
 export const BrowseAPI = {
     getItem: (id) => `https://api.ebay.com/buy/browse/v1/item/v1|${id}|0?fieldgroups=PRODUCT`,
@@ -12,15 +12,17 @@ export const InventoryAPI = {
     createOrReplaceProductCompatibility: (sku) => `https://api.ebay.com/sell/inventory/v1/inventory_item/${sku}/product_compatibility`,
     createOffer: () => `https://api.ebay.com/sell/inventory/v1/offer`,
     getOffers: (sku) => `https://api.ebay.com/sell/inventory/v1/offer?sku=${sku}`,
-    deleteOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}`
+    deleteOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}`,
+    publishOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}/publish`,
+    withdrawOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}/withdraw`,
 }
 
-export const SKU = (mpn) => `av-${mpn.replace('/', '_')}`;
+export const SKU = (mpn) => `av-${mpn.replace('/ ', '_')}`;
 
 export const AxiosHeaders = (token) => ({
     "Authorization": 'Bearer ' + token,
-    'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-    'Content-Language': 'en-US'
+    'X-EBAY-C-MARKETPLACE-ID': 'EBAY_DE',
+    'Content-Language': 'de-DE'
 })
 
 const convertCompatibilities = (rawCompatibilities) => {
@@ -31,16 +33,23 @@ const convertCompatibilities = (rawCompatibilities) => {
     for (let prop of properties) {
         const newCompatibility = {
             note: '',
-            productFamilyProperties: {
-                ...prop
-            }
+            productFamilyProperties: {}
         };
         const keys = Object.keys(prop);
         const values = Object.values(prop);
         for (let i = 0; i < keys.length; i++) {
             newCompatibility.productFamilyProperties[keys[i].toLowerCase()] = values[i];
         }
-        result.compatibleProducts.push(newCompatibility)
+        const newCompatibilitySeparatedByYear = newCompatibility.productFamilyProperties.year.split('\u000b').map((x, i) => ({
+            ...newCompatibility,
+            productFamilyProperties: {
+                ...newCompatibility.productFamilyProperties,
+                year: x
+            }
+        }))
+        for (const nCSBY of newCompatibilitySeparatedByYear) {
+            result.compatibleProducts.push(nCSBY)
+        }
     }
     return result;
 }
@@ -48,6 +57,7 @@ const convertCompatibilities = (rawCompatibilities) => {
 const generateInventoryItem = async (productRawData, productApidata) => {
     const inventoryItem = {
         product: {
+            brand: productRawData?.aspects.Hersteller[0],
             mpn: productRawData?.aspects.Herstellernummer[0],//productApidata?.mpn,
             imageUrls: [
                 productRawData.image_url
@@ -55,11 +65,17 @@ const generateInventoryItem = async (productRawData, productApidata) => {
             aspects: productRawData?.aspects,
             title: productRawData?.name?.substring(0, 80),
         },
+        condition: 'NEW'//productRawData?.aspects.Condition[0].toUpperCase(),
         // availability: {
         //     shipToLocationAvailability: {
         //         quantity: 1,
         //     }
         // }
+    }
+    const aspectsKeys = Object.keys(inventoryItem.product.aspects);
+    const aspectsValues = Object.values(inventoryItem.product.aspects);
+    for (let i = 0; i < aspectsKeys.length; i++) {
+        inventoryItem.product.aspects[aspectsKeys[i]] = [...aspectsValues[i].map(x => x.substring(0, 65),)]
     }
     return inventoryItem;
 }
@@ -67,7 +83,7 @@ const generateInventoryItem = async (productRawData, productApidata) => {
 const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
     return {
         "sku": SKU(inventoryItem.product.mpn),
-        "marketplaceId": "EBAY_US",
+        "marketplaceId": "EBAY_DE",
         "format": "FIXED_PRICE",
         "listingDescription": `${inventoryItem.product.title}`,
         "availableQuantity": 100,
@@ -75,7 +91,7 @@ const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
         "pricingSummary": {
             "price": {
                 "value": +productRaw.price.replace("$", ''),
-                "currency": "USD"
+                "currency": "EUR"
             }
         },
         "listingPolicies": {
@@ -164,6 +180,28 @@ const fetchDeleteOffer = async (offerId, headers) => {
     console.log("Create Product Compatibility Response: ", response.status, response.data)
     return response.data;
 }
+const fetchPublishOffer = async (offerId, headers) => {
+    const response = await redirectRequest({
+        data: {},
+        headers: headers,
+        url: InventoryAPI.publishOffer(offerId),
+        method: 'POST'
+    });
+
+    console.log("Publish Offer Response: ", response.status, response.data)
+    return response.data;
+}
+const fetchWithdrawOffer = async (offerId, headers) => {
+    const response = await redirectRequest({
+        data: {},
+        headers: headers,
+        url: InventoryAPI.withdrawOffer(offerId),
+        method: 'POST'
+    });
+
+    console.log("Withdraw Offer Response: ", response.status, response.data)
+    return response.data;
+}
 
 export const addProduct = async ({ productRaw, productCompatibility, offerRaw, token }) => {
 
@@ -180,7 +218,8 @@ export const addProduct = async ({ productRaw, productCompatibility, offerRaw, t
     console.log("Raw offer data: ", offerRaw);
     const offerData = await generateoffer(productRaw, inventoryItem, offerRaw);
     console.log("Ready offer data: ", offerData);
-    await fetchCreateOffer(offerData, SKU(inventoryItem.product.mpn), AxiosHeaders(token));
+    const {data} = await fetchCreateOffer(offerData, SKU(inventoryItem.product.mpn), AxiosHeaders(token));
+    return data.offerId;
 }
 
 export const deleteProduct = async ({ productRaw, token }) => {
@@ -192,4 +231,13 @@ export const deleteProduct = async ({ productRaw, token }) => {
     const offerId = offerResponse.data.offers[0].offerId;
     console.log("OFFER ID: ", offerId);
     await fetchDeleteOffer(offerId, AxiosHeaders(token))
+
+}
+
+export const publishOffer = async ({offerId, token}) => {
+    await fetchPublishOffer(offerId, AxiosHeaders(token));
+}
+
+export const withdrawOffer = async ({offerId, token}) => {
+    await fetchWithdrawOffer(offerId, AxiosHeaders(token));
 }

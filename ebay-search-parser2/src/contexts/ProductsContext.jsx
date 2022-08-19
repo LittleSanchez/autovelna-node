@@ -6,6 +6,8 @@ import {
     AxiosHeaders,
     BrowseAPI,
     deleteProduct,
+    publishOffer,
+    withdrawOffer,
 } from "../services/add-product";
 import {
     fetchCompability,
@@ -36,6 +38,10 @@ const initialState = {
     fetchAddAllProducts: () => {},
     fetchDeleteProductById: (productId) => {},
     fetchDeleteAllProducts: () => {},
+    fetchPublishOfferById: (productId) => {},
+    fetchPublishAllOffers: () => {},
+    fetchWithdrawOfferById: (productId) => {},
+    fetchWithdrawAllOffers: () => {},
 };
 
 const ProductsContext = createContext(initialState);
@@ -44,6 +50,14 @@ const ProductsContextProvider = ({ children }) => {
     const [productsRaw, setProductsRaw] = useState([]);
     const [productsApi, setProductsApi] = useState([]);
     const [productsCompabitility, setProductsCompatibility] = useState([]);
+    const [productOffers, setProductOffers] = useState({});
+
+    const appendProductOffer = (productId, offerId) => {
+        const newProductOffer = {
+            [productId]: offerId
+        };
+        setProductOffers({...productOffers, ...newProductOffer})
+    }
 
     const offerRaw = useOffer();
 
@@ -131,7 +145,7 @@ const ProductsContextProvider = ({ children }) => {
                 productId,
                 compatibilityToken
             );
-            await addProduct({
+            return await addProduct({
                 productRaw: productsRaw.find((x) => x.id === productId),
                 productCompatibility: productCompatibility,
                 offerRaw: offerRaw,
@@ -143,11 +157,50 @@ const ProductsContextProvider = ({ children }) => {
     };
 
     const fetchAddAllProducts = async () => {
+        const offerIds = {};
         for (let product of productsRaw) {
-            await fetchAddProductById(product.id);
+            const offerId = await fetchAddProductById(product.id);
+            if (offerId){
+                console.log("Adding offer Id: ", offerId);
+                offerIds[product.id] = offerId;
+            }
+        }
+        console.log("All ready offers: ", offerIds);
+        setProductOffers(offerIds);
+    };
+
+    const fetchPublishOfferById = async (productId) => {
+        try {
+            await publishOffer({
+                offerId: productOffers[productId],
+                token: apiToken,
+            });
+        } catch (e) {
+            console.error(e);
         }
     };
 
+    const fetchPublishAllOffers = async () => {
+        for (let product of productsRaw) {
+            await fetchPublishOfferById(product.id);
+        }
+    };
+    const fetchWithdrawOfferById = async (productId) => {
+        try {
+            await withdrawOffer({
+                offerId: productOffers[productId],
+                token: apiToken,
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const fetchWithdrawAllOffers = async () => {
+        for (let product of productsRaw) {
+            await fetchWithdrawOfferById(product.id);
+        }
+    };
     const fetchDeleteProductById = async (productId) => {
         try {
             await deleteProduct({
@@ -182,6 +235,10 @@ const ProductsContextProvider = ({ children }) => {
                 fetchAddAllProducts,
                 fetchDeleteProductById,
                 fetchDeleteAllProducts,
+                fetchPublishOfferById,
+                fetchPublishAllOffers,
+                fetchWithdrawOfferById,
+                fetchWithdrawAllOffers,
             }}>
             {children}
         </ProductsContext.Provider>

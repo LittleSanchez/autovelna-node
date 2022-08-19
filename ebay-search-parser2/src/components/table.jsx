@@ -14,8 +14,13 @@ const Table = ({ withDetails, ref, privateToken }) => {
     const {
         productsRaw,
         fetchAddProductById,
+        fetchDeleteProductById,
+        fetchPublishOfferById,
+        fetchWithdrawOfferById,
         fetchAddAllProducts,
         fetchDeleteAllProducts,
+        fetchPublishAllOffers,
+        fetchWithdrawAllOffers,
     } = useProducts();
     const [compabilityProductId, setCompabilityProductId] =
         useState(COMPABILITY_CLOSED);
@@ -42,10 +47,24 @@ const Table = ({ withDetails, ref, privateToken }) => {
         await fetchDeleteAllProducts();
     };
 
+    
+    const handlePublishAll = async () => {
+        await fetchPublishAllOffers();
+    };
+
+    
+    const handleWithdrawAll = async () => {
+        await fetchWithdrawAllOffers();
+    };
+
+    
+
     return (
         <div>
             <button onClick={() => handleAddAll()}>Add All</button>
             <button onClick={() => handleDeleteAll()}>Delete All</button>
+            <button onClick={() => handlePublishAll()}>Publish All</button>
+            <button onClick={() => handleWithdrawAll()}>Withdraw All</button>
             <table id="mainTable" ref={ref}>
                 <thead>
                     <tr>
@@ -89,6 +108,24 @@ const Table = ({ withDetails, ref, privateToken }) => {
                                                     fetchAddProductById(x.id)
                                                 }>
                                                 Add Right NOW
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    fetchDeleteProductById(x.id)
+                                                }>
+                                                Delete Right NOW
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    fetchPublishOfferById(x.id)
+                                                }>
+                                                Publish Right NOW
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    fetchWithdrawOfferById(x.id)
+                                                }>
+                                                Withdraw Right NOW
                                             </button>
                                             {compabilityProductId === x.id && (
                                                 <button

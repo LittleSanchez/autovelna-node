@@ -188,7 +188,7 @@ const searchSeller = async (seller, p, d) => {
 
     if (!browser)
         browser = await puppeteer.launch({
-            headless: false,
+            // headless: false,
         });
 
     const page = await browser.newPage();
@@ -232,11 +232,9 @@ const searchSeller = async (seller, p, d) => {
 }
 
 const getOAuthCompatibilityTocken = async () => {
-
-
     if (!browser)
         browser = await puppeteer.launch({
-            headless: false,
+            // headless: false,
         });
 
     const page = await browser.newPage();
