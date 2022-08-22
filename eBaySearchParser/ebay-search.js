@@ -117,12 +117,13 @@ const getItemDetails = async (page, url) => {
         return details;
     } catch (e) {
         console.error(e);
+        throw e;
     }
 }
 
-const sellerShopPage = async (page, seller) => {
+const sellerShopPage = async (page, seller, s) => {
     await page.goto(
-        `https://www.ebay.com/sch/i.html?_dkr=1&iconV2Request=true&_ssn=${seller}`,
+        `https://www.ebay.com/sch/i.html?_dkr=1&iconV2Request=true&_ssn=${seller}&_pgn=${s ?? 1}`,
         { waitUntil: 'networkidle2' });
 }
 
@@ -130,7 +131,7 @@ const nextItemsPage = async (page) => {
     let url = page.url();
     // if (+page.url().split('_pgn=')[1][1] > 8) throw new Exception("End of cycle")
     if (url.includes('_pgn')) {
-        const matches = [...url.matchAll(/_pgn=([\d])/g)][0];
+        const matches = [...url.matchAll(/_pgn=([\d]+)/g)][0];
         console.log('Mat: ', matches);
         const currentPage = +matches[1];
         console.log('Mat: ', matches);
@@ -184,49 +185,58 @@ const searchEbay = async (q, d) => {
 };
 // searchEbay('RAV ATF DEXRON D II 1L')
 
-const searchSeller = async (seller, p, d) => {
+const searchSeller = async (seller,p, d, s) => {
 
     if (!browser)
         browser = await puppeteer.launch({
-            // headless: false,
+            headless: false,
         });
 
     const page = await browser.newPage();
     // await search(page, q);
-    await sellerShopPage(page, seller);
+    await sellerShopPage(page, seller, s ?? 1);
     //get Items
     let totalItems = []
     try {
         for (let i = 0; i < p; i++) {
             const items = await getItems(page);
-            totalItems = [...totalItems, ...items];
+            for(const item of items) {
+                console.log("New items found: ", items.length)
+                totalItems.push(item);
+                // totalItems = [...totalItems, ...items];
+                console.log(totalItems.length);
+            }
             await nextItemsPage(page);
             await sleep(2500);
         }
     }
     catch (e) {
         console.error(e);
+        throw e;
     }
 
     console.log("details: ", d);
     if (d) {
         for (let i = 0; i < totalItems.length; i++) {
             try {
-                console.log(totalItems[i])
+                console.log(i);
+                // console.log(totalItems[i])
                 const details = await getItemDetails(page, totalItems[i].url);
-                console.log('details', details);
+                // console.log('details', details);
                 totalItems[i] = { ...totalItems[i], ...details };
-                console.log(totalItems[i]);
+                // console.log(totalItems[i]);
             }
             catch (e) {
                 console.error(e);
+                await sleep(5000);
+                throw e;
             }
         }
     }
     await page.close();
     // await sleep(10000);
     //writeFileSync('search-data.json', JSON.stringify(items));
-    console.log(totalItems);
+    // console.log(totalItems);
     return totalItems;
 
 }

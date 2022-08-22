@@ -100,6 +100,16 @@ function Home() {
         console.log('Data: ', JSON.parse(data))
         setProductsRaw(JSON.parse(data));
     }
+    const handleOffersFileLoaded = async (data) => {
+        console.log('Data: ', JSON.parse(data))
+        const obj = JSON.parse(data)
+        const productsOffer = {};
+        for(let item of obj) {
+            productsOffer[item.productRaw.id] = item.offerId;
+        }
+        console.log("Products Offer: ", productsOffer);
+        setProductsRaw(JSON.parse(data));
+    }
 
     return (
         <div className="App">
@@ -147,7 +157,10 @@ function Home() {
                         </label>
                     </div>
                     <div>
-                        <FileLoader onFileLoad={handleProductsFileLoaded}/>
+                        <FileLoader title="Load Raw Products" onFileLoad={handleProductsFileLoaded}/>
+                    </div>
+                    <div>
+                        <FileLoader title="Load Product Offers" onFileLoad={handleOffersFileLoaded}/>
                     </div>
                     <button onClick={() => handleAddAll()}>Add All</button>
                     <button onClick={() => handleDeleteAll()}>

@@ -1,6 +1,10 @@
 import axios from "axios";
 import { REDIRECT_URL } from "../consts/api";
 
+const CURRENCY_NAMES = {
+    EUR: 1,
+    USD: 0.995
+}
 
 export const BrowseAPI = {
     getItem: (id) => `https://api.ebay.com/buy/browse/v1/item/v1|${id}|0?fieldgroups=PRODUCT`,
@@ -15,6 +19,28 @@ export const InventoryAPI = {
     deleteOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}`,
     publishOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}/publish`,
     withdrawOffer: (offerId) => `https://api.ebay.com/sell/inventory/v1/offer/${offerId}/withdraw`,
+}
+
+const priceConvertion = (price, fromCurrency, toCurrency, percentage) => {
+    let EURvalue = 0;
+    switch(fromCurrency) {
+        case CURRENCY_NAMES.USD:
+            EURvalue = price / CURRENCY_NAMES.USD;
+            break;
+        default:
+            EURvalue = price;
+            break;
+    }
+    let targetValue = 0
+    switch(toCurrency) {
+        case CURRENCY_NAMES.USD:
+            targetValue = EURvalue  * CURRENCY_NAMES.USD;
+            break;
+        default:
+            targetValue = EURvalue;
+            break;
+    }
+    return targetValue;
 }
 
 export const SKU = (mpn) => `av-${mpn.replace(/[\s/]+/g, '_')}`;
@@ -82,6 +108,7 @@ const generateInventoryItem = async (productRawData, productApidata) => {
 }
 
 const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
+    const priceAffection = 0.95;
     return {
         "sku": SKU(inventoryItem.product.mpn),
         "marketplaceId": "EBAY_DE",
@@ -91,7 +118,7 @@ const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
         "quantityLimitPerBuyer": 10,
         "pricingSummary": {
             "price": {
-                "value": +productRaw.price.replace("$", ''),
+                "value":  `${priceConvertion(+productRaw.price.replace('$', ''), CURRENCY_NAMES.USD, CURRENCY_NAMES.EUR) * priceAffection}`,
                 "currency": "EUR"
             }
         },
