@@ -97,7 +97,8 @@ function Home() {
     };
 
     const handleProductsFileLoaded = async (data) => {
-        setProductsRaw(data);
+        console.log('Data: ', JSON.parse(data))
+        setProductsRaw(JSON.parse(data));
     }
 
     return (
