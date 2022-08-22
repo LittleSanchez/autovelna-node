@@ -23,7 +23,7 @@ export const InventoryAPI = {
 
 const priceConvertion = (price, fromCurrency, toCurrency, percentage) => {
     let EURvalue = 0;
-    switch(fromCurrency) {
+    switch (fromCurrency) {
         case CURRENCY_NAMES.USD:
             EURvalue = price / CURRENCY_NAMES.USD;
             break;
@@ -32,9 +32,9 @@ const priceConvertion = (price, fromCurrency, toCurrency, percentage) => {
             break;
     }
     let targetValue = 0
-    switch(toCurrency) {
+    switch (toCurrency) {
         case CURRENCY_NAMES.USD:
-            targetValue = EURvalue  * CURRENCY_NAMES.USD;
+            targetValue = EURvalue * CURRENCY_NAMES.USD;
             break;
         default:
             targetValue = EURvalue;
@@ -118,7 +118,7 @@ const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
         "quantityLimitPerBuyer": 10,
         "pricingSummary": {
             "price": {
-                "value":  `${priceConvertion(+productRaw.price.replace('$', ''), CURRENCY_NAMES.USD, CURRENCY_NAMES.EUR) * priceAffection}`,
+                "value": `${priceConvertion(+productRaw.price.replace('$', ''), CURRENCY_NAMES.USD, CURRENCY_NAMES.EUR) * priceAffection}`,
                 "currency": "EUR"
             }
         },
@@ -180,7 +180,14 @@ const fetchCreateOffer = async (offerData, sku, headers) => {
         url: InventoryAPI.createOffer(),
         method: 'POST'
     });
-
+    if (!response?.data?.data?.offerId) {
+        const {data} = await fetchGetOfferId(offerData.sku, headers);
+        return {
+            data: {
+                offerId: data.offers[0].offerId
+            }
+        }
+    }
     console.log("Create Offer Response: ", response.status, response.data)
     return response.data;
 }
@@ -247,6 +254,7 @@ export const addProduct = async ({ productRaw, productCompatibility, offerRaw, t
     const offerData = await generateoffer(productRaw, inventoryItem, offerRaw);
     console.log("Ready offer data: ", offerData);
     const { data } = await fetchCreateOffer(offerData, SKU(inventoryItem.product.mpn), AxiosHeaders(token));
+    console.log("Returning offer ID: ", data.offerId);
     return data.offerId;
 }
 

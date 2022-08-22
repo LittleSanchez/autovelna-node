@@ -80,8 +80,9 @@ const Table = ({ withDetails, ref, privateToken }) => {
                                                     : "Hide"}
                                             </button>
                                             <button
-                                                onClick={() =>
+                                                onClick={() =>{
                                                     fetchAddProductById(x.id)
+                                                }
                                                 }>
                                                 Add Right NOW
                                             </button>

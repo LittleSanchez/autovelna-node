@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { useState } from "react";
 
-const FileLoader = ({onFileLoad, title}) => {
+const FileLoader = ({onFileLoad, title, name}) => {
     const [file, setFile] = useState(null);
 
     const fileInputRef = useRef(null)
@@ -21,7 +21,7 @@ const FileLoader = ({onFileLoad, title}) => {
     }
 
     return <div>
-        <input onChange={handleFileChange} ref={fileInputRef} type="file" name="profucts-load" id="products-load" style={{display: 'none'}} />
+        <input onChange={handleFileChange} ref={fileInputRef} type="file" name={name} id={name} style={{display: 'none'}} />
         <button onClick={handleOpenFile}>{title}</button>
     </div>
 }

@@ -81,7 +81,7 @@ function Home() {
                 pagesCount,
                 finishedDate: new Date().toISOString(),
             },
-            `info-${new Date().toISOString().replace(/:/g, '-')}`
+            `info-${new Date().toISOString().replace(/:/g, "-")}`
         );
     };
     const handleDeleteAll = async () => {
@@ -97,18 +97,35 @@ function Home() {
     };
 
     const handleProductsFileLoaded = async (data) => {
-        console.log('Data: ', JSON.parse(data))
+        console.log("Data: ", JSON.parse(data));
         setProductsRaw(JSON.parse(data));
-    }
+    };
     const handleOffersFileLoaded = async (data) => {
-        console.log('Data: ', JSON.parse(data))
-        const obj = JSON.parse(data)
+        console.log("Data: ", JSON.parse(data));
+        const obj = JSON.parse(data);
         const productsOffer = {};
-        for(let item of obj) {
+        for (let item of obj) {
             productsOffer[item.productRaw.id] = item.offerId;
         }
         console.log("Products Offer: ", productsOffer);
-        setProductsRaw(JSON.parse(data));
+        setProductsRaw(obj.map((x) => x.productRaw));
+    };
+
+    const handleInstantPublish = async () => {
+        await handleConvertImages();
+        setTimeout(async () => {
+            await handleAddAll();
+            setTimeout(async () => {
+                await handlePublishAll();
+            }, 1500);
+        }, 1500);
+    };
+
+    const handleInstantOffer = async () => {
+        await handleConvertImages();
+        setTimeout(async () => {
+            await handleAddAll();
+        }, 1500);
     }
 
     return (
@@ -157,11 +174,25 @@ function Home() {
                         </label>
                     </div>
                     <div>
-                        <FileLoader title="Load Raw Products" onFileLoad={handleProductsFileLoaded}/>
+                        <FileLoader
+                            name={"file_load_produts_raw"}
+                            title="Load Raw Products"
+                            onFileLoad={handleProductsFileLoaded}
+                        />
                     </div>
                     <div>
-                        <FileLoader title="Load Product Offers" onFileLoad={handleOffersFileLoaded}/>
+                        <FileLoader
+                            name={"file_load_product_offers"}
+                            title="Load Product Offers"
+                            onFileLoad={handleOffersFileLoaded}
+                        />
                     </div>
+                    {/* <div>
+                        <FileLoader title="Load Successful Products" onFileLoad={handleSuccessfulFileLoaded}/>
+                    </div>
+                    <div>
+                        <FileLoader title="Load Errored Products" onFileLoad={handleErroredFileLoaded}/>
+                    </div> */}
                     <button onClick={() => handleAddAll()}>Add All</button>
                     <button onClick={() => handleDeleteAll()}>
                         Delete All
@@ -171,6 +202,12 @@ function Home() {
                     </button>
                     <button onClick={() => handleWithdrawAll()}>
                         Withdraw All
+                    </button>
+                    <button onClick={() => handleInstantPublish()}>
+                        Instant Publish All
+                    </button>
+                    <button onClick={() => handleInstantOffer()}>
+                        Instant Offer All
                     </button>
                 </div>
                 <div>
