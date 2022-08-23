@@ -3,6 +3,7 @@ const { default: parse } = require("node-html-parser");
 const { sleep } = require("./common");
 const puppeteer = require('puppeteer');
 const request_client = require('request-promise-native');
+const fs = require('fs');
 
 
 const EBAY_SEARCH_MAIN_PAGE_ID = 'gh-ac';
@@ -61,33 +62,36 @@ const search = async (page, q) => {
     })
 }
 
-const getItems = async (page) => {
-    const items = await page.evaluate(async (sel, is) => {
-        const items = [...document.querySelectorAll(sel)];
-        const results = [];
-        for (let item of items) {
-            results.push({
-                id: [...item.querySelector(is.url).getAttribute('href').matchAll(/itm\/([\d]+)/g)][0][1],
-                url: item.querySelector(is.url).getAttribute('href'),
-                name: item.querySelector(is.name).textContent,
-                price: item.querySelector(is.price).textContent,
-                delivery_price: '$' + item.querySelector(is.delivery_price).textContent
-                    .replace(/[^0-9.]/g, ""),
-                image_url: item.querySelector(is.image_url).getAttribute('src').replace('/thumbs', '').replace('225', '500'),
-            })
-        }
-        return results;
-    }, EBAY_SEARCH_ITEMS_SELECTOR,
-        ITEM_SELECTOR)
+const getItems = async (htmlData) => {
+    const root = parse(htmlData);
+    const items = [...root.querySelectorAll(EBAY_SEARCH_ITEMS_SELECTOR)];
+    if (items.length) {
+        fs.writeFileSync('lag.html', htmlData);
+    }
+    console.log('Found items: ', items);
+    const results = [];
+    for (let item of items) {
+        results.push({
+            id: [...item.querySelector(ITEM_SELECTOR.url).getAttribute('href').matchAll(/itm\/([\d]+)/g)][0][1],
+            url: item.querySelector(ITEM_SELECTOR.url).getAttribute('href'),
+            name: item.querySelector(ITEM_SELECTOR.name).textContent,
+            price: item.querySelector(ITEM_SELECTOR.price).textContent,
+            delivery_price: '$' + item.querySelector(ITEM_SELECTOR.delivery_price).textContent
+                .replace(/[^0-9.]/g, ""),
+            image_url: item.querySelector(ITEM_SELECTOR.image_url).getAttribute('src').replace('/thumbs', '').replace('225', '500'),
+        })
+        console.log('new : ', results[results.length - 1])
+    }
+    return results;
 
     // console.log(items);
     return items;
 }
 
-const getItemDetails = async (page, url) => {
+const getItemDetails = async (htmlData) => {
     // await page.goto(url, { waitUntil: 'networkidle2' });
     try {
-        const { data: htmlData } = await axios.get(url);
+        // const { data: htmlData } = await axios.get(url);
         // console.log(htmlData);
         const root = parse(htmlData);
         const details = {
@@ -98,14 +102,14 @@ const getItemDetails = async (page, url) => {
         const aspectLabels = [...root.querySelectorAll(ASPECTS_SELECTOR.labels)]?.map(x => x.textContent);
         const aspectValues = [...root.querySelectorAll(ASPECTS_SELECTOR.values)]?.map(x => x.textContent);
 
-        console.log("Labels: ", aspectLabels);
-        console.log("Values: ", aspectValues);
+        // console.log("Labels: ", aspectLabels);
+        // console.log("Values: ", aspectValues);
 
         const aspects = {}
         for (let i = 0; i < aspectLabels.length; i++) {
             aspects[aspectLabels[i].replace(':', '')] = [aspectValues[i]];
         }
-        console.log(aspects);
+        // console.log(aspects);
         details.aspects = aspects;
         // const details = await page.evaluate(async () => {
         //     return {
@@ -113,7 +117,7 @@ const getItemDetails = async (page, url) => {
         //         saller: document.querySelector('.ux-section--nameAndAddress .ux-textspans')?.textContent ?? 'Not specified',
         //     }
         // })
-        console.log(details);
+        // console.log(details);
         return details;
     } catch (e) {
         console.error(e);
@@ -121,10 +125,11 @@ const getItemDetails = async (page, url) => {
     }
 }
 
-const sellerShopPage = async (page, seller, s) => {
-    await page.goto(
-        `https://www.ebay.com/sch/i.html?_dkr=1&iconV2Request=true&_ssn=${seller}&_pgn=${s ?? 1}`,
-        { waitUntil: 'networkidle2' });
+const sellerShopPage = (seller, s) => {
+    return `https://www.ebay.com/sch/i.html?_dkr=1&iconV2Request=true&_ssn=${seller}&_pgn=${s ?? 1}`;
+    // await page.goto(
+    //     `https://www.ebay.com/sch/i.html?_dkr=1&iconV2Request=true&_ssn=${seller}&_pgn=${s ?? 1}`,
+    //     { waitUntil: 'networkidle2' });
 }
 
 const nextItemsPage = async (page) => {
@@ -154,7 +159,7 @@ let browser = undefined;
 const searchEbay = async (q, d) => {
     if (!browser)
         browser = await puppeteer.launch({
-            // headless: false,
+            headless: false,
         });
 
     const page = await browser.newPage();
@@ -185,29 +190,46 @@ const searchEbay = async (q, d) => {
 };
 // searchEbay('RAV ATF DEXRON D II 1L')
 
-const searchSeller = async (seller,p, d, s) => {
+const parallels = async (urls) => {
+    return axios.all(urls.map(url => axios.get(url, {
+        headers: {
+            'user-agent': 'Chrome/104.0.5112.101'
+        }
+    })))
+}
 
-    if (!browser)
-        browser = await puppeteer.launch({
-            headless: false,
-        });
+const searchSeller = async (seller, p, d, s) => {
 
-    const page = await browser.newPage();
+
+
+    // if (!browser)
+    //     browser = await puppeteer.launch({
+    //         headless: false,
+    //     });
+
+    // const page = await browser.newPage();
     // await search(page, q);
-    await sellerShopPage(page, seller, s ?? 1);
     //get Items
     let totalItems = []
     try {
-        for (let i = 0; i < p; i++) {
-            const items = await getItems(page);
-            for(const item of items) {
-                console.log("New items found: ", items.length)
-                totalItems.push(item);
-                // totalItems = [...totalItems, ...items];
-                console.log(totalItems.length);
+        for (let i = 0; i < p; i += 20) {
+            const urls = [...Array(Math.min(20, p - i)).keys()].map(x => x + i + 1).map(x => sellerShopPage(seller, x));
+            console.log(urls);
+            const datas = await parallels(urls)
+            // console.log("DAATAAA: ", datas[3].data.length);
+            const items_blocks = await (await Promise.allSettled(datas.map(x => getItems(x.data)))).map(x => x.value);
+            console.log("ITEMS_BLOCKS: ", items_blocks.map(x => x.length));
+            // const url = sellerShopPage(page, seller, s ?? 1);
+
+            // const items = await getItems(page);
+            for (const items of items_blocks) {
+                for (const item of items) {
+                    console.log("New items found: ", items.length)
+                    totalItems.push(item);
+                    // totalItems = [...totalItems, ...items];
+                    console.log(totalItems.length);
+                }
             }
-            await nextItemsPage(page);
-            await sleep(2500);
         }
     }
     catch (e) {
@@ -217,23 +239,30 @@ const searchSeller = async (seller,p, d, s) => {
 
     console.log("details: ", d);
     if (d) {
-        for (let i = 0; i < totalItems.length; i++) {
+        for (let i = 0; i < totalItems.length; i += 20) {
             try {
-                console.log(i);
-                // console.log(totalItems[i])
-                const details = await getItemDetails(page, totalItems[i].url);
-                // console.log('details', details);
-                totalItems[i] = { ...totalItems[i], ...details };
-                // console.log(totalItems[i]);
+                const urls = [...Array(Math.min(20, totalItems.length - i)).keys()].map(x => x + i).map(x => totalItems[x].url);
+                console.log(urls);
+                const datas = await parallels(urls);
+                console.log("DAATAAA: ", datas.length);
+                const items_details = (await Promise.allSettled(datas.map(x => getItemDetails(x.data)))).map(x => x.value);
+                console.log("ITEMS_DETAILS: ", items_details.length);
+                await sleep(1500);
+                for (let details of items_details) {
+                    console.log("Details: ", details);
+                    totalItems[i] = { ...totalItems[i], ...details };
+                    console.log("Joined product: ", totalItems[i]);
+                }
             }
             catch (e) {
+                console.log("ERROR IN REQUEST, WAITING 5 SECONDS AND CONTINUE");
                 console.error(e);
+                i -= 20;
                 await sleep(5000);
-                throw e;
             }
         }
     }
-    await page.close();
+    // await page.close();
     // await sleep(10000);
     //writeFileSync('search-data.json', JSON.stringify(items));
     // console.log(totalItems);
@@ -244,7 +273,7 @@ const searchSeller = async (seller,p, d, s) => {
 const getOAuthCompatibilityTocken = async () => {
     if (!browser)
         browser = await puppeteer.launch({
-            // headless: false,
+            headless: false,
         });
 
     const page = await browser.newPage();

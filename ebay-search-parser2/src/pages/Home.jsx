@@ -56,6 +56,7 @@ function Home() {
             case REQUEST_TYPES.seller:
                 await fetchSellerProductsRaw(
                     searchData,
+                    startPage,
                     pagesCount,
                     withDetails
                 );

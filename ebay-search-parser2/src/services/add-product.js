@@ -271,7 +271,8 @@ export const deleteProduct = async ({ productRaw, token }) => {
 }
 
 export const publishOffer = async ({ offerId, token }) => {
-    await fetchPublishOffer(offerId, AxiosHeaders(token));
+    const {data} = await fetchPublishOffer(offerId, AxiosHeaders(token));
+    return data.listingId;
 }
 
 export const withdrawOffer = async ({ offerId, token }) => {

@@ -17,7 +17,7 @@ const { createWriteStream, rm, rmSync } = require("fs");
 console.log(new Date().toISOString().replace(/:/g, '-'));
 
 const VERIFICATION_TOKEN = "t9v-t7i8o7_tiu-r7ihl37iGLg_L43423";
-const ENDPOINT = "https://e003-90-138-121-152.ngrok.io";
+const ENDPOINT = "http://localhost:3253";
 
 async function downloadFile(fileUrl, outputLocationPath) {
     const writer = createWriteStream(outputLocationPath);
@@ -68,41 +68,52 @@ const proceedImages = async (companyName, images) => {
             console.log(`stderr: ${stderr}`);
         }
     });
-    const newImages = [];
-    for (let i = 0; i < images.length; i++) {
-        const image = images[i];
-
-        console.log("Currently working on ", image);
-        const ext = getFileExtension(image);
-        const inputFile = withWindowsPath(`${WORK_DIR}/tmp/tmp-dwnld-${i + 1}.${ext}`);
-        const outputFile = withWindowsPath(`${outputDir}/${companyName}-${i + 1}.${ext}`);
+    const proceed = async (image, i) => {
         try {
-            rmSync(inputFile);
-        } catch (e) {}
-        await downloadFile(image, inputFile);
-        await transferLogo(inputFile, companyName, outputFile);
-        console.log("Success");
-        newImages.push(
-            `${ENDPOINT}/images/${__dir}/${companyName}-${i + 1}.${ext}`
-        );
+            console.log("Currently working on ", image);
+            const ext = getFileExtension(image);
+            const inputFile = withWindowsPath(`${WORK_DIR}/tmp/tmp-dwnld-${i + 1}.${ext}`);
+            const outputFile = withWindowsPath(`${outputDir}/${companyName}-${i + 1}.${ext}`);
+            try {
+                rmSync(inputFile);
+            } catch (e) { }
+            await downloadFile(image, inputFile);
+            await transferLogo(inputFile, companyName, outputFile, i + 1);
+            console.log("Success");
+            return `${ENDPOINT}/images/${__dir}/${companyName}-${i + 1}.${ext}`;
+        } catch (e) {
+            console.log("Error on ", image, i);
+            console.error(e);
+            console.log('ITERATION ERROR: ', i);
+            return await proceed(image, i);
+       }
     }
+
+    let newImages = [];
+    for (let i = 0; i < images.length; i += 15) {
+        const tasks = [...Array(Math.min(15, images.length - i)).keys()].map(x => images[x]);
+        const results = (await Promise.allSettled(tasks.map((x, i) => proceed(x, i)))).map(x => x.value);
+        newImages = [...newImages, ...results];
+        console.log("CURRENT POSITION: ", i, ", results: ", results)
+    }
+    console.log(newImages.length);
     try {
         rmSync(withWindowsPath(`${WORK_DIR}/tmp`));
-    } catch (e) {}
+    } catch (e) { }
     return newImages;
 };
 
 const app = express();
 
-const corsOptions = {origin: '*'}
+const corsOptions = { origin: '*' }
 
-app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.json({ limit: '50mb' }));
 
 app.use("/images", express.static(withWindowsPath(__dirname + "/out")));
 
 const port = 3253;
 
-app.use((req,res,next) => {
+app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "http://localhost:3000"); // restrict it to the required domain
     res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
     // Set custom headers for CORS
@@ -115,7 +126,7 @@ app.use((req,res,next) => {
         console.log("ADDED CORS HEADERS After: ", res.headersSent)
         return res.end();
     }
-    
+
     return next();
 })
 

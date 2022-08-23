@@ -44,7 +44,7 @@ app.post('/', async (req, res) => {
 app.get('/seller', async (req, res) => {
     console.log("Params: ", req.query.seller);
     const items = await searchSeller(req.query.seller, +req.query.pages, req.query.d, +(req?.query?.s ?? 1));
-    // console.log(items)
+    console.log(items)
     console.log(items.length);
     res.send(JSON.stringify(items))
 })

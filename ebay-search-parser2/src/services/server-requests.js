@@ -16,11 +16,12 @@ export const getData = async (searchData, withDetails) => {
     }
 };
 
-export const getSellerData = async (searchData, pagesCount, withDetails) => {
+export const getSellerData = async (searchData, startPage, pagesCount, withDetails) => {
     try {
         const response = await axios.get(API_SELLER_URL, {
             params: {
                 seller: searchData,
+                s: startPage,
                 pages: pagesCount,
                 d: withDetails ? true : undefined,
             },

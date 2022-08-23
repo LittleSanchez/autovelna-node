@@ -1,8 +1,8 @@
-export const API_URL = 'http://192.168.8.139:3213/';
-export const API_SELLER_URL = 'http://192.168.8.139:3213/seller';
-export const API_TOKEN = 'http://192.168.8.139:3213/compatibility_token';
-export const API_IMAGE_TRANSFER = 'http://192.168.8.139:3253/';
-export const REDIRECT_URL = 'http://192.168.8.139:3253/redirect'
+export const API_URL = 'http://localhost:3213/';
+export const API_SELLER_URL = 'http://localhost:3213/seller';
+export const API_TOKEN = 'http://localhost:3213/compatibility_token';
+export const API_IMAGE_TRANSFER = 'http://localhost:3253/';
+export const REDIRECT_URL = 'http://localhost:3253/redirect'
 
 
 export const COMPABILITY_TEMPLATE_URL = (id, limit, offset) =>

@@ -56,10 +56,10 @@ const generateCovering = async (companyName) => {
     }).toFile(COVERING_FILE_NAME);
 };
 
-const resizeLogo = async (companyName) => {
+const resizeLogo = async (companyName, i) => {
     const bareLogo = getFileNameWithoutExtension(LOGO);
     const ext = getFileExtension(LOGO);
-    const newLogoName = withWindowsPath(`${WORK_DIR}/${bareLogo}-tmp.${ext}`);
+    const newLogoName = withWindowsPath(`${WORK_DIR}/${bareLogo}-tmp-${i}.${ext}`);
     const { width, height, left, top } = config[companyName];
     await sharp(withWindowsPath(`${WORK_DIR}/${LOGO}`))
         .resize(width, Number.parseInt(height * 0.75), {
@@ -76,10 +76,13 @@ const resizeLogo = async (companyName) => {
     return newLogoName;
 };
 
-const applyNewLogo = async (img, companyName, fileExt) => {
+const applyNewLogo = async (img, companyName, i) => {
     try {
         const { width, height, left, top } = config[companyName];
-        const newLogoName = await resizeLogo(companyName);
+        // const newLogoName = await resizeLogo(companyName,i);
+        const bareLogo = getFileNameWithoutExtension(LOGO);
+        const ext = getFileExtension(LOGO);
+        const newLogoName = withWindowsPath(`${WORK_DIR}/${bareLogo}-tmp-${i}.${ext}`);
         console.log("New logo", newLogoName);
         return await img.composite([
             {
@@ -99,12 +102,12 @@ const applyNewLogo = async (img, companyName, fileExt) => {
     }
 };
 
-const transferLogo = async (fileName, companyName, outputFileName) => {
+const transferLogo = async (fileName, companyName, outputFileName, i) => {
     const ext = getFileExtension(fileName);
     const bareFileName = getFileNameWithoutExtension(fileName);
     const img = await loadImage(fileName);
     await generateCovering(companyName);
-    const resultImg = await applyNewLogo(img, companyName, ext);
+    const resultImg = await applyNewLogo(img, companyName, i);
     await resultImg.toFile(outputFileName);
 };
 
