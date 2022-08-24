@@ -212,8 +212,8 @@ const searchSeller = async (seller, p, d, s) => {
     //get Items
     let totalItems = []
     try {
-        for (let i = 0; i < p; i += 20) {
-            const urls = [...Array(Math.min(20, p - i)).keys()].map(x => x + i + 1).map(x => sellerShopPage(seller, x));
+        for (let i = s; i < p + s; i += 20) {
+            const urls = [...Array(Math.min(20, p + s - i)).keys()].map(x => x + i + 1).map(x => sellerShopPage(seller, x));
             console.log(urls);
             const datas = await parallels(urls)
             // console.log("DAATAAA: ", datas[3].data.length);
@@ -248,10 +248,11 @@ const searchSeller = async (seller, p, d, s) => {
                 const items_details = (await Promise.allSettled(datas.map(x => getItemDetails(x.data)))).map(x => x.value);
                 console.log("ITEMS_DETAILS: ", items_details.length);
                 await sleep(1500);
-                for (let details of items_details) {
+                for (let j = 0; j < Math.min(20, totalItems.length - i); j++) {
+                    const details = items_details[j]
                     console.log("Details: ", details);
-                    totalItems[i] = { ...totalItems[i], ...details };
-                    console.log("Joined product: ", totalItems[i]);
+                    totalItems[i + j] = { ...totalItems[i + j], ...details };
+                    console.log("Joined product: ", totalItems[i + j]);
                 }
             }
             catch (e) {
@@ -266,6 +267,7 @@ const searchSeller = async (seller, p, d, s) => {
     // await sleep(10000);
     //writeFileSync('search-data.json', JSON.stringify(items));
     // console.log(totalItems);
+    console.log("TOTAL ITEMS: ", totalItems);
     return totalItems;
 
 }

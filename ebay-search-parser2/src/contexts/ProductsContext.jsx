@@ -183,19 +183,19 @@ const ProductsContextProvider = ({ children }) => {
         for(let i = 0; i < productsRaw.length; i+= 20) {
             const tasks = [...Array(Math.min(20, productsRaw.length - i)).keys()]
                 .map(x => x + i)
-                .map(x => fetchAddProductById(productsRaw[i].id));
+                .map(x => fetchAddProductById(productsRaw[x].id));
             const result = (await Promise.allSettled(tasks)).map(x => x.value);
-            for (let j = i; j < i + 20; j++) {
+            for (let j = 0; j < 20; j++) {
                 if (result[j] && typeof result[j] !== "object") {
                     console.log("Adding offer Id: ", result[j]);
-                    offerIds[productsRaw[j].id] = result[j];
+                    offerIds[productsRaw[i + j].id] = result[j];
                     successfulProducts.push({
-                        productRaw: productsRaw[j],
+                        productRaw: productsRaw[i + j],
                         offerId: result[j],
                     });
                 } else {
                     erroredProducts.push({
-                        productRaw: productsRaw[j],
+                        productRaw: productsRaw[i + j],
                         error: result[j],
                     });
                 }

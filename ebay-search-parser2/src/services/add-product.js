@@ -60,19 +60,26 @@ const convertCompatibilities = (rawCompatibilities) => {
     for (let prop of properties) {
         const newCompatibility = {
             note: '',
-            productFamilyProperties: {}
+            compatibilityProperties: []
         };
-        const keys = Object.keys(prop);
+        const keys = Object.keys(prop).map(x => x.toLowerCase());
         const values = Object.values(prop);
         for (let i = 0; i < keys.length; i++) {
-            newCompatibility.productFamilyProperties[keys[i].toLowerCase()] = values[i];
+            newCompatibility.compatibilityProperties.push({
+                name: keys[i],
+                value: values[i],
+            });
         }
-        const newCompatibilitySeparatedByYear = newCompatibility.productFamilyProperties.year.split('\u000b').map((x, i) => ({
+        console.log('Compatibility preview: ', newCompatibility.compatibilityProperties)
+        const newCompatibilitySeparatedByYear = newCompatibility.compatibilityProperties.find(x => x.name === 'year').value.split('\u000b').map((x, i) => ({
             ...newCompatibility,
-            productFamilyProperties: {
-                ...newCompatibility.productFamilyProperties,
-                year: x
-            }
+            compatibilityProperties: [
+                ...newCompatibility.compatibilityProperties,
+                {
+                    name: 'year',
+                    value: x,
+                }
+            ]
         }))
         for (const nCSBY of newCompatibilitySeparatedByYear) {
             result.compatibleProducts.push(nCSBY)
@@ -181,7 +188,7 @@ const fetchCreateOffer = async (offerData, sku, headers) => {
         method: 'POST'
     });
     if (!response?.data?.data?.offerId) {
-        const {data} = await fetchGetOfferId(offerData.sku, headers);
+        const { data } = await fetchGetOfferId(offerData.sku, headers);
         return {
             data: {
                 offerId: data.offers[0].offerId
@@ -271,7 +278,7 @@ export const deleteProduct = async ({ productRaw, token }) => {
 }
 
 export const publishOffer = async ({ offerId, token }) => {
-    const {data} = await fetchPublishOffer(offerId, AxiosHeaders(token));
+    const { data } = await fetchPublishOffer(offerId, AxiosHeaders(token));
     return data.listingId;
 }
 
