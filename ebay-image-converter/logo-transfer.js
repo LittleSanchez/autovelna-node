@@ -76,15 +76,22 @@ const resizeLogo = async (companyName, i) => {
     return newLogoName;
 };
 
-const applyNewLogo = async (img, companyName, i) => {
+const applyNewLogo = async (img, companyName, i, createTmpLogo = false) => {
     try {
         const { width, height, left, top } = config[companyName];
         // const newLogoName = await resizeLogo(companyName,i);
-        const bareLogo = getFileNameWithoutExtension(LOGO);
-        const ext = getFileExtension(LOGO);
-        const newLogoName = withWindowsPath(`${WORK_DIR}/${bareLogo}-tmp-${i}.${ext}`);
+        let newLogoName = ''
+        if (!createTmpLogo) {
+            const bareLogo = getFileNameWithoutExtension(LOGO);
+            const ext = getFileExtension(LOGO);
+            newLogoName = withWindowsPath(`${WORK_DIR}/${bareLogo}-tmp.${ext}`);
+        } else {
+            console.log('Creating new logo: ');
+            newLogoName = await resizeLogo(companyName,i);
+            console.log('New logo created: ', newLogoName);
+        }
         console.log("New logo", newLogoName);
-        return await img.composite([
+        const result = await img.composite([
             {
                 input: COVERING_FILE_NAME,
                 left,
@@ -96,8 +103,13 @@ const applyNewLogo = async (img, companyName, i) => {
                 top,
             },
         ]);
+        return result;
     } catch (e) {
         console.log(e);
+        if (!createTmpLogo) {
+            console.log("Going to create new logo");
+            return await applyNewLogo(img, companyName, i, true);
+        }
         return undefined;
     }
 };

@@ -17,7 +17,7 @@ const { createWriteStream, rm, rmSync } = require("fs");
 console.log(new Date().toISOString().replace(/:/g, '-'));
 
 const VERIFICATION_TOKEN = "t9v-t7i8o7_tiu-r7ihl37iGLg_L43423";
-const ENDPOINT = "http://localhost:3253";
+const ENDPOINT = "https://f096d236e0c3.ngrok.io";
 
 async function downloadFile(fileUrl, outputLocationPath) {
     const writer = createWriteStream(outputLocationPath);
