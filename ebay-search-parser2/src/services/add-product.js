@@ -1,4 +1,5 @@
 import axios from "axios";
+import automarkas from './ktypes-automarkas.json';
 import { REDIRECT_URL } from "../consts/api";
 
 const CURRENCY_NAMES = {
@@ -51,7 +52,71 @@ export const AxiosHeaders = (token) => ({
     'Content-Language': 'de-DE'
 })
 
+const convertCompatibilitiesKtype = (rawCompatibilities) => {
+    const vehicles = Object.values(rawCompatibilities.vehicles);
+    const totalCompatibilities = [];
+    for (let vehicle of vehicles) {
+        const newCompatibility = {
+            compatibilityProperties: [
+                {
+                    name: 'ktype',
+                    value: vehicle.id,
+                }
+            ]
+        }
+        totalCompatibilities.push(newCompatibility);
+    }
+    return {
+        compatibleProducts: totalCompatibilities
+    };
+}
+
 const convertCompatibilities = (rawCompatibilities) => {
+    const vehicles = Object.values(rawCompatibilities.vehicles);
+    const totalCompatibilities = [];
+    for (let vehicle of vehicles) {
+        const automark = automarkas.filter(x => x.ktype === vehicle.id)?.at(0);
+        console.log(automark);
+        const newCompatibility = [
+            {
+                name: 'make',
+                value: automark.make,
+            },
+            {
+                name: 'model',
+                value: automark.model,
+            },
+            {
+                name: 'platform',
+                value: automark.variant,
+            },
+            {
+                name: 'engine',
+                value: automark.engine,
+            },
+        ]
+        // const firstYear = +vehicle.yearOfConstructionInterval.split(' ')[0].replace(/-[\d]{2}/g, '')
+        // const lastYear = +vehicle.yearOfConstructionInterval.split(' ')[2].replace(/-[\d]{2}/g, '')
+        const years = automark.year.split(/[^\d]+/g);
+        years.forEach((x) =>
+            totalCompatibilities.push({
+                compatibilityProperties: [
+                    ...newCompatibility,
+                    {
+                        name: 'year',
+                        value: `${x}`
+                    }
+                ]
+            })
+        )
+    }
+    console.log("Generated total compatibilities: ", totalCompatibilities);
+    return {
+        compatibleProducts: totalCompatibilities
+    };
+}
+
+const convertCompatibilitiesOld = (rawCompatibilities) => {
     const properties = rawCompatibilities?.compatibleProducts?.members?.map(x => x.productProperties) ?? undefined;
     const result = {
         compatibleProducts: []
@@ -66,8 +131,8 @@ const convertCompatibilities = (rawCompatibilities) => {
         const values = Object.values(prop);
         for (let i = 0; i < keys.length; i++) {
             newCompatibility.compatibilityProperties.push({
-                name: keys[i],
-                value: values[i],
+                name: keys[i].substr(0, 60),
+                value: values[i].substr(0, 60),
             });
         }
         console.log('Compatibility preview: ', newCompatibility.compatibilityProperties)
@@ -76,7 +141,7 @@ const convertCompatibilities = (rawCompatibilities) => {
             result.compatibleProducts.push({
                 compatibilityProperties: newCompatibility.compatibilityProperties.map(y => y.name === 'year' ? ({
                     name: 'year',
-                    value: x,
+                    value: x.substr(0, 60),
                 }) : y)
             }
             )
@@ -99,12 +164,25 @@ const convertCompatibilities = (rawCompatibilities) => {
 const generateInventoryItem = async (productRawData, productApidata) => {
     const inventoryItem = {
         product: {
-            brand: productRawData?.aspects.Hersteller[0],
-            mpn: productRawData?.aspects.Herstellernummer[0],//productApidata?.mpn,
+            brand: productRawData?.brand,
+            mpn: productRawData?.brand_code,//productApidata?.mpn,
             imageUrls: [
                 productRawData.image_url
             ],
-            aspects: productRawData?.aspects,
+            "aspects": {
+                "Condition": [
+                    "New"
+                ],
+                "Herstellernummer": [
+                    productRawData?.brand_code
+                ],
+                "Hersteller": [
+                    productRawData.brand
+                ],
+                "OE/OEM Referenznummer(n)": [
+                    `${productRawData.brand_code} ${productRawData.name.toUpperCase()}`.substring(0, 80)
+                ]
+            },
             title: productRawData?.name?.substring(0, 80),
         },
         condition: 'NEW',//productRawData?.aspects.Condition[0].toUpperCase(),
@@ -128,7 +206,7 @@ const generateInventoryItem = async (productRawData, productApidata) => {
 }
 
 const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
-    const priceAffection = 0.95;
+    const priceAffection = 1.5;
     return {
         "sku": SKU(inventoryItem.product.mpn),
         "marketplaceId": "EBAY_DE",
@@ -138,7 +216,7 @@ const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
         "quantityLimitPerBuyer": 10,
         "pricingSummary": {
             "price": {
-                "value": `${priceConvertion(+productRaw.price.replace('$', ''), CURRENCY_NAMES.USD, CURRENCY_NAMES.EUR) * priceAffection}`,
+                "value": `${+productRaw.price * priceAffection}`,
                 "currency": "EUR"
             }
         },
@@ -147,13 +225,13 @@ const generateoffer = async (productRaw, inventoryItem, offerRaw) => {
             "paymentPolicyId": offerRaw.paymentPolicy,
             "returnPolicyId": offerRaw.returnPolicy,
         },
-        "categoryId": productRaw.category_id,
+        "categoryId": Number.parseInt(offerRaw.categoryId),
         "merchantLocationKey": offerRaw.inventoryLocation,
     }
 
 }
 
-const redirectRequest = async (options) => {
+export const redirectRequest = async (options) => {
     const response = await axios.post(REDIRECT_URL, options);
     console.log("REDIRECT RESPONSE: ", response)
     return response;
@@ -224,6 +302,19 @@ const fetchGetOfferId = async (sku, headers) => {
     return response.data;
 }
 
+const fetchLiquidateOffersBySku = async (sku, headers) => {
+    const offerResponse = await fetchGetOfferId(sku, headers);
+    const offerId = offerResponse?.data?.offers?.at(0)?.offerId ?? undefined;
+    if (offerId) {
+        // console.warn("Found existing offer. Creating of new offer is being stopped. Fix that line to be togglable in future!")
+        // throw TypeError;
+        await fetchDeleteOffer(offerId, headers);
+        console.log("Deleted old offer: ", offerId);
+    } else {
+        console.log("Old offer hasn't been found.");
+    }
+}
+
 const fetchDeleteOffer = async (offerId, headers) => {
     const response = await redirectRequest({
         data: {},
@@ -261,19 +352,22 @@ const fetchWithdrawOffer = async (offerId, headers) => {
 export const addProduct = async ({ productRaw, productCompatibility, offerRaw, token }) => {
 
     console.log("Product data: ", productRaw);
-    const convertedCompatibilities = convertCompatibilities(productCompatibility);
+    const convertedCompatibilities = convertCompatibilitiesKtype(productCompatibility);
     console.log("Product compatibility: ", convertedCompatibilities);
     // const productApiData = await fetchDataWithId(productData.id, AxiosHeaders(token));
     // console.log("Product API Details: ", productApiData)
     const inventoryItem = await generateInventoryItem(productRaw);
     console.log("Generated Inventory item: ", inventoryItem);
 
-    await fetchCreateInventoryItem(inventoryItem, SKU(inventoryItem.product.mpn), AxiosHeaders(token))
-    await fetchAddProductCompatibility(convertedCompatibilities, SKU(inventoryItem.product.mpn), AxiosHeaders(token))
+    const sku = SKU(inventoryItem.product.mpn);
+
+    await fetchCreateInventoryItem(inventoryItem, sku, AxiosHeaders(token))
+    await fetchAddProductCompatibility(convertedCompatibilities, sku, AxiosHeaders(token))
     console.log("Raw offer data: ", offerRaw);
     const offerData = await generateoffer(productRaw, inventoryItem, offerRaw);
     console.log("Ready offer data: ", offerData);
-    const { data } = await fetchCreateOffer(offerData, SKU(inventoryItem.product.mpn), AxiosHeaders(token));
+    await fetchLiquidateOffersBySku(sku, AxiosHeaders(token));
+    const { data } = await fetchCreateOffer(offerData, sku, AxiosHeaders(token));
     console.log("Returning offer ID: ", data.offerId);
     return data.offerId;
 }

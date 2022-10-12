@@ -62,13 +62,15 @@ const search = async (page, q) => {
     })
 }
 
-const getItems = async (htmlData) => {
+const getItems = async (url) => {
+    const htmlData = await requestWithAgent(url);
     const root = parse(htmlData);
     const items = [...root.querySelectorAll(EBAY_SEARCH_ITEMS_SELECTOR)];
-    if (items.length) {
-        fs.writeFileSync('lag.html', htmlData);
+    console.log("I got items with length: ", items.length);
+    if (items.length === 0) {
+        return await getItems(url);
     }
-    console.log('Found items: ', items);
+    // console.log('Found items: ', items);
     const results = [];
     for (let item of items) {
         results.push({
@@ -190,12 +192,14 @@ const searchEbay = async (q, d) => {
 };
 // searchEbay('RAV ATF DEXRON D II 1L')
 
+const requestWithAgent = async (url) => await axios.get(url, {
+    headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'
+    }
+})
+
 const parallels = async (urls) => {
-    return axios.all(urls.map(url => axios.get(url, {
-        headers: {
-            'user-agent': 'Chrome/104.0.5112.101'
-        }
-    })))
+    axios.all(urls.map(url => requestWithAgent(url)));
 }
 
 const searchSeller = async (seller, p, d, s) => {
@@ -215,9 +219,9 @@ const searchSeller = async (seller, p, d, s) => {
         for (let i = s; i < p + s; i += 20) {
             const urls = [...Array(Math.min(20, p + s - i)).keys()].map(x => x + i + 1).map(x => sellerShopPage(seller, x));
             console.log(urls);
-            const datas = await parallels(urls)
+            // const datas = await parallels(urls)
             // console.log("DAATAAA: ", datas[3].data.length);
-            const items_blocks = await (await Promise.allSettled(datas.map(x => getItems(x.data)))).map(x => x.value);
+            const items_blocks = await (await Promise.allSettled(urls.map(x => getItems(x)))).map(x => x.value);
             console.log("ITEMS_BLOCKS: ", items_blocks.map(x => x.length));
             // const url = sellerShopPage(page, seller, s ?? 1);
 

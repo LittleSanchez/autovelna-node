@@ -5,10 +5,12 @@ const initialState = {
     returnPolicy: undefined,
     paymentPolicy: undefined,
     inventoryLocation: undefined,
+    categoryId: undefined,
     setFulfillmentPolicy: (value) => {},
     setReturnPolicy: (value) => {},
     setPaymentPolicy: (value) => {},
     setInventoryLocation: (value) => {},
+    setCategoryId: (value) => {},
 };
 
 const OfferInfoContext = createContext(initialState);
@@ -18,6 +20,8 @@ const OfferInfoProvider = ({ children }) => {
     const [returnPolicy, setReturnPolicy] = useState('');
     const [paymentPolicy, setPaymentPolicy] = useState('');
     const [inventoryLocation, setInventoryLocation] = useState('');
+    const [categoryId, setCategoryId] = useState('');
+
 
     return (
         <OfferInfoContext.Provider
@@ -26,10 +30,12 @@ const OfferInfoProvider = ({ children }) => {
                 returnPolicy,
                 paymentPolicy,
                 inventoryLocation,
+                categoryId,
                 setFulfillmentPolicy,
                 setReturnPolicy,
                 setPaymentPolicy,
                 setInventoryLocation,
+                setCategoryId,
             }}>
             {children}
         </OfferInfoContext.Provider>

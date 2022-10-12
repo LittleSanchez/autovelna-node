@@ -8,6 +8,7 @@ import Loading from "../components/loading";
 import Policies from "../components/policies";
 import Table from "../components/table";
 import { useAuthApi } from "../contexts/AuthApiContext";
+import { useOffer } from "../contexts/OfferInfoContext";
 import { REQUEST_TYPES, useProducts } from "../contexts/ProductsContext";
 import { downloadFile } from "../services/downloadData";
 
@@ -16,7 +17,7 @@ function Home() {
     const { apiToken, setApiToken } = useAuthApi();
     const [currentRequest, setCurrentRequest] = useState(null);
     const [startPage, setStartPage] = useState(1);
-    const [pagesCount, setPagesCount] = useState(1);
+    const [maxPage, setMaxPage] = useState(1);
     const [withDetails, setWithDetails] = useState(false);
     const [loading, setLoading] = useState(false);
     const [searchData, setSearchData] = useState(undefined);
@@ -24,15 +25,22 @@ function Home() {
     const {
         productsRaw,
         setProductsRaw,
+        setProductOffers,
         fetchProductRaw,
         fetchSellerProductsRaw,
         fetchConvertedImages,
+        fetchEans,
         fetchProductsApiFromCurrentRaw,
         fetchAddAllProducts,
         fetchDeleteAllProducts,
         fetchPublishAllOffers,
         fetchWithdrawAllOffers,
     } = useProducts();
+
+    const {
+        categoryId,
+        setCategoryId,
+    } = useOffer();
 
     useEffect(() => {
         document.body.style.overflowY = loading ? "hidden" : "auto";
@@ -45,6 +53,12 @@ function Home() {
         await fetchConvertedImages(searchData, currentRequest);
         setLoading(false);
     };
+    
+    const handleApplyEans = async () => {
+        setLoading(true);
+        await fetchEans();
+        setLoading(false);
+    }
 
     const handleSearch = async () => {
         if (!searchData || searchData === "" || !apiToken) return;
@@ -57,7 +71,7 @@ function Home() {
                 await fetchSellerProductsRaw(
                     searchData,
                     startPage,
-                    pagesCount,
+                    maxPage,
                     withDetails
                 );
                 break;
@@ -79,7 +93,7 @@ function Home() {
         downloadFile(
             {
                 startPage,
-                pagesCount,
+                maxPage,
                 finishedDate: new Date().toISOString(),
             },
             `info-${new Date().toISOString().replace(/:/g, "-")}`
@@ -110,6 +124,7 @@ function Home() {
         }
         console.log("Products Offer: ", productsOffer);
         setProductsRaw(obj.map((x) => x.productRaw));
+        setProductOffers(productsOffer);
     };
 
     const handleInstantPublish = async () => {
@@ -127,7 +142,7 @@ function Home() {
         setTimeout(async () => {
             await handleAddAll();
         }, 1500);
-    }
+    };
 
     return (
         <div className="App">
@@ -157,10 +172,10 @@ function Home() {
                             id="details"
                             name="details"
                             type="number"
-                            checked={pagesCount}
-                            onChange={(e) => setPagesCount(e.target.value)}
+                            checked={maxPage}
+                            onChange={(e) => setMaxPage(e.target.value)}
                         />
-                        <label for="details">Number of pages</label>
+                        <label for="details">Max page</label>
                     </div>
                     <div style={styles.centerBox}>
                         <input
@@ -241,6 +256,9 @@ function Home() {
                             <button onClick={() => handleConvertImages()}>
                                 Convert images
                             </button>
+                            <button onClick={() => handleApplyEans()}>
+                                Apply eans
+                            </button>
                         </div>
                         <div>
                             <label htmlFor="private_token">
@@ -252,6 +270,18 @@ function Home() {
                                 id=""
                                 value={apiToken}
                                 onChange={(e) => setApiToken(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="category-id">
+                                Your category Id
+                            </label>
+                            <input
+                                type="text"
+                                name="category-id"
+                                id=""
+                                value={categoryId}
+                                onChange={(e) => setCategoryId(e.target.value)}
                             />
                         </div>
                         <Policies />

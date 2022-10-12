@@ -14,6 +14,7 @@ import {
     fetchCompability,
     getConvertedImages,
     getData,
+    getEans,
     getSellerData,
 } from "../services/server-requests";
 import { useAuthApi } from "./AuthApiContext";
@@ -34,6 +35,7 @@ const initialState = {
     setProductOffers: () => {},
     fetchProductRaw: (searchData, withDetails) => {},
     fetchSellerProductsRaw: (searchData, pagesCount, withDetails) => {},
+    fetchEans: () => {},
     fetchConvertedImages: (searchData, currentRequest) => {},
     fetchProductsApiFromCurrentRaw: () => {},
     fetchAddProductById: (productId) => {},
@@ -55,7 +57,6 @@ const ProductsContextProvider = ({ children }) => {
     const [productOffers, setProductOffers] = useState({});
     const [productListings, setProductListings] = useState({});
 
-
     const appendProductOffer = (productId, offerId) => {
         const newProductOffer = {
             [productId]: offerId,
@@ -64,10 +65,14 @@ const ProductsContextProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        downloadFile(
-            productsRaw,
-            `search-results-${new Date().toISOString().replace(/:/g, "-")}.json`
-        );
+        if (productsRaw && productsRaw.length > 0) {
+            downloadFile(
+                productsRaw,
+                `search-results-${new Date()
+                    .toISOString()
+                    .replace(/:/g, "-")}.json`
+            );
+        }
     }, [productsRaw]);
 
     const offerRaw = useOffer();
@@ -102,7 +107,12 @@ const ProductsContextProvider = ({ children }) => {
     ) => {
         try {
             setProductsRaw(
-                await getSellerData(searchData, startPage, pagesCount, withDetails)
+                await getSellerData(
+                    searchData,
+                    startPage,
+                    pagesCount,
+                    withDetails
+                )
             );
         } catch (e) {
             console.error(e);
@@ -117,6 +127,14 @@ const ProductsContextProvider = ({ children }) => {
                     currentRequest === REQUEST_TYPES.seller ? searchData : ""
                 )
             );
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const fetchEans = async () => {
+        try {
+            setProductsRaw(await getEans(productsRaw));
         } catch (e) {
             console.error(e);
         }
@@ -154,13 +172,14 @@ const ProductsContextProvider = ({ children }) => {
 
     const fetchAddProductById = async (productId) => {
         try {
-            console.log("Starting on id: ", productId);
+            const productRaw = productsRaw.find((x) => x.id === productId);
+            console.log("Starting on id: ", productRaw.hash_token);
             const productCompatibility = await fetchCompability(
-                productId,
+                productRaw.hash_token,
                 compatibilityToken
             );
             const offerId = await addProduct({
-                productRaw: productsRaw.find((x) => x.id === productId),
+                productRaw: productRaw,
                 productCompatibility: productCompatibility,
                 offerRaw: offerRaw,
                 token: apiToken,
@@ -180,11 +199,15 @@ const ProductsContextProvider = ({ children }) => {
         const successfulProducts = [];
         const erroredProducts = [];
         const offerIds = {};
-        for(let i = 0; i < productsRaw.length; i+= 20) {
-            const tasks = [...Array(Math.min(20, productsRaw.length - i)).keys()]
-                .map(x => x + i)
-                .map(x => fetchAddProductById(productsRaw[x].id));
-            const result = (await Promise.allSettled(tasks)).map(x => x.value);
+        for (let i = 0; i < productsRaw.length; i += 20) {
+            const tasks = [
+                ...Array(Math.min(20, productsRaw.length - i)).keys(),
+            ]
+                .map((x) => x + i)
+                .map((x) => fetchAddProductById(productsRaw[x].id));
+            const result = (await Promise.allSettled(tasks)).map(
+                (x) => x.value
+            );
             for (let j = 0; j < 20; j++) {
                 if (result[j] && typeof result[j] !== "object") {
                     console.log("Adding offer Id: ", result[j]);
@@ -233,6 +256,10 @@ const ProductsContextProvider = ({ children }) => {
 
     const fetchPublishOfferById = async (productId) => {
         try {
+            console.log(
+                `Extracting offerId with productId [${productId}], offerId - [${productOffers[productId]}], productOffers: `,
+                productOffers
+            );
             const listingId = await publishOffer({
                 offerId: productOffers[productId],
                 token: apiToken,
@@ -247,25 +274,53 @@ const ProductsContextProvider = ({ children }) => {
         const successfulOffers = [];
         const erroredOffers = [];
         const listingIds = {};
-        for (let product of productsRaw) {
-            const listingId = await fetchPublishOfferById(product.id);
-            if (listingId) {
-                listingIds[product.id] = listingId;
-                successfulOffers.push({
-                    productRaw: product,
-                    offerId: productOffers[product.id],
-                    listingId: listingId,
-                })
-            } else {
-                erroredOffers.push({
-                    productRaw: product,
-                    offerId: productOffers[product.id],
-                })
+        for (let i = 0; i < productsRaw.length; i += 20) {
+            const tasks = [
+                ...Array(Math.min(20, productsRaw.length - i)).keys(),
+            ]
+                .map((x) => x + i)
+                .map((x) => fetchPublishOfferById(productsRaw[x].id));
+            const result = (await Promise.allSettled(tasks)).map(
+                (x) => x.value
+            );
+            for (let j = 0; j < 20; j++) {
+                if (result[j] && typeof result[j] !== "object") {
+                    console.log("Adding offer Id: ", result[j]);
+                    listingIds[productsRaw[i + j].id] = result[j];
+                    successfulOffers.push({
+                        productRaw: productsRaw[i + j],
+                        offerId: productOffers[productsRaw[i + j].id],
+                        listingId: result[j],
+                    });
+                } else {
+                    erroredOffers.push({
+                        productRaw: productsRaw[i + j],
+                        offerId: productOffers[productsRaw[i + j].id],
+                    });
+                }
             }
         }
+        // for (let product of productsRaw) {
+        //     const listingId = await fetchPublishOfferById(product.id);
+        //     if (listingId) {
+        //         listingIds[product.id] = listingId;
+        //         successfulOffers.push({
+        //             productRaw: product,
+        //             offerId: productOffers[product.id],
+        //             listingId: listingId,
+        //         })
+        //     } else {
+        //         erroredOffers.push({
+        //             productRaw: product,
+        //             offerId: productOffers[product.id],
+        //         })
+        //     }
+        // }
         await downloadFile(
             successfulOffers,
-            `successful-offers-${new Date().toISOString().replace(/:/g, "-")}.json`
+            `successful-offers-${new Date()
+                .toISOString()
+                .replace(/:/g, "-")}.json`
         );
         await downloadFile(
             erroredOffers,
@@ -319,6 +374,7 @@ const ProductsContextProvider = ({ children }) => {
                 fetchProductRaw,
                 fetchSellerProductsRaw,
                 fetchConvertedImages,
+                fetchEans,
                 fetchProductsApiFromCurrentRaw,
                 fetchAddProductById,
                 fetchAddAllProducts,

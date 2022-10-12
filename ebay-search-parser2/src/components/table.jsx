@@ -1,4 +1,5 @@
 import React from "react";
+import { useEffect } from "react";
 import { useState } from "react";
 import { useProducts } from "../contexts/ProductsContext";
 import useCompability from "../hooks/useCompability";
@@ -21,6 +22,9 @@ const Table = ({ withDetails, ref, privateToken }) => {
     const [compabilityProductId, setCompabilityProductId] =
         useState(COMPABILITY_CLOSED);
     const { compability, loading } = useCompability(compabilityProductId);
+    useEffect(() => {
+        console.log("We have updated compatibility: ", compability);
+    }, [compability, loading]);
     const { token, update } = useOAuth();
     const handleCompabilityClick = (id) => {
         setCompabilityProductId(
@@ -36,28 +40,21 @@ const Table = ({ withDetails, ref, privateToken }) => {
         });
     };
 
-    
-
     return (
         <div>
-            
             <table id="mainTable" ref={ref}>
                 <thead>
                     <tr>
                         <th></th>
-                        <th>Ebay Product Id</th>
+                        <th>Code(id)</th>
+                        <th>Brand Code</th>
+                        <th>EAN</th>
+                        <th>Brand</th>
+                        <th>Brand Special Name</th>
                         <th>Name</th>
                         <th>Price</th>
-                        <th>Category Id</th>
-                        <th>Delivery price</th>
-                        {withDetails && (
-                            <>
-                                <th>Seller</th>
-                                <th>Sold</th>
-                            </>
-                        )}
-                        <th>Total Price</th>
                         <th>Image</th>
+                        <th>Hash token</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,10 +77,9 @@ const Table = ({ withDetails, ref, privateToken }) => {
                                                     : "Hide"}
                                             </button>
                                             <button
-                                                onClick={() =>{
-                                                    fetchAddProductById(x.id)
-                                                }
-                                                }>
+                                                onClick={() => {
+                                                    fetchAddProductById(x.id);
+                                                }}>
                                                 Add Right NOW
                                             </button>
                                             <button
@@ -114,31 +110,21 @@ const Table = ({ withDetails, ref, privateToken }) => {
                                             )}
                                         </td>
                                         <td>{x.id}</td>
+                                        <td>{x.brand_code}</td>
+                                        {x?.ean ? <td>{x.ean}</td> : null}
+                                        <td>{x.brand}</td>
+                                        <td>{x.brand_special_name}</td>
                                         <td>
                                             <a href={x.url}>{x.name}</a>
                                         </td>
                                         <td>{x.price}</td>
-                                        <td>{x.category_id}</td>
-                                        <td>{x.delivery_price}</td>
-                                        {withDetails && (
-                                            <>
-                                                <td>
-                                                    {x?.saller ?? "loading"}
-                                                </td>
-                                                <td>{x?.sold ?? "loading"}</td>
-                                            </>
-                                        )}
                                         <td>
-                                            $
-                                            {+x.price.replace(/[^0-9.]/g, "") +
-                                                +x.delivery_price.replace(
-                                                    /[^0-9.]/g,
-                                                    ""
-                                                )}
+                                            <img
+                                                src={x.image_url}
+                                                alt={`Product ${x.id}`}
+                                            />
                                         </td>
-                                        <td>
-                                            <img src={x.image_url} />
-                                        </td>
+                                        <td>{x.hash_token}</td>
                                     </tr>
                                     {compabilityProductId === x.id && (
                                         <tr>

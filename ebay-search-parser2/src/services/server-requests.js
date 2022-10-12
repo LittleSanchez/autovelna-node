@@ -1,5 +1,6 @@
 import axios from "axios";
-import { API_IMAGE_TRANSFER, API_SELLER_URL, API_URL, COMPABILITY_TEMPLATE_URL } from "../consts/api";
+import { API_EANS, API_IMAGE_TRANSFER, API_SELLER_URL, API_URL, COMPABILITY_TEMPLATE_URL, EOLTAS_COMPATIBILITY } from "../consts/api";
+import { redirectRequest } from "./add-product";
 
 export const getData = async (searchData, withDetails) => {
     try {
@@ -37,7 +38,7 @@ export const getConvertedImages = async (data, companyName) => {
     console.log(data?.map((x) => x.image_url));
     try {
         const response = await axios.post(API_IMAGE_TRANSFER, {
-            companyName:companyName,
+            companyName: companyName,
             images: data?.map((x) => x.image_url),
         });
         return data.map((x, i) => ({
@@ -50,15 +51,38 @@ export const getConvertedImages = async (data, companyName) => {
     }
 };
 
-export const fetchCompability = async (productId, token) => {
-    console.log("Sending request, id: ", productId);
-    const response = await axios.get(COMPABILITY_TEMPLATE_URL(productId, 5000, 0), {
+export const getEans = async (productsRaw) => {
+    const mpns = productsRaw.map(x => x.brand_code);
+    console.log("MPNs: ", mpns);
+    if (!mpns || mpns.length === 0) {
+        console.error("No MPNs to send");
+        return;
+    }
+    try {
+        const response = await axios.post(API_EANS, {
+            mpns,
+        });
+        return productsRaw.map((x, i) => ({
+            ...x,
+            ean: response.data[x.brand_code]
+        }));
+    } catch (e) {
+        console.error(e);
+    }
+
+}
+
+export const fetchCompability = async (productHash, token) => {
+    console.log("Sending request, id: ", productHash);
+    const response = await redirectRequest({
+        data: {},
         headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-EBAY-C-MARKETPLACE-ID': 'EBAY-US'
-        }
-    });
-    console.log("Received request, id: ", productId);
-    console.log(response.data);
-    return response.data;
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        url: EOLTAS_COMPATIBILITY(productHash),
+        method: 'GET'
+    })
+    console.log("Received request, id: ", productHash);
+    console.log(response.data.data);
+    return response.data.data;
 }

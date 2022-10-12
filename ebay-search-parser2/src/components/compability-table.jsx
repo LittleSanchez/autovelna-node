@@ -1,31 +1,30 @@
 import React from "react";
 
 const CompabilityTable = ({ data }) => {
-    const additionalProperties = data?.additionalProperties ?? undefined;
-    const properties =
-        data?.compatibleProductMetadata?.compatibilityProperties ??
-        undefined;
-    const products = data?.compatibleProducts?.members ?? undefined;
+    // const additionalProperties = data?.additionalProperties ?? undefined;
+    // const properties =
+    //     data?.compatibleProductMetadata?.compatibilityProperties ??
+    //     undefined;
+    // const products = data?.compatibleProducts?.members ?? undefined;
+    const vehicles = Object.values(data.vehicles);
+    const vehicleKeys = Object.keys(vehicles[0]).filter(x => !Array.isArray(vehicles[0][x]));
+    console.log(vehicleKeys);
     return (
         <table>
             <thead>
                 <tr>
-                    {additionalProperties &&
-                        additionalProperties.map((x, i) => (
-                            <th key={i}>{x.name}</th>
-                        ))}
-                    {properties &&
-                        properties.map((x, i) => <th key={i}>{x.name}</th>)}
+                    {vehicles && vehicles.length > 0 &&
+                        vehicleKeys.map((x, i) => <th key={i}>{x}</th>)}
                 </tr>
             </thead>
             <tbody>
-                {products &&
-                    products.map((x, i) => (
+                {vehicles &&
+                    vehicles.map((x, i) => (
                         <tr key={i}>
-                            {[...additionalProperties, ...properties].map(
+                            {vehicleKeys.map(
                                 (xx, ii) => (
                                     <td key={ii}>
-                                        {x.productProperties[xx.name]}
+                                        {x[xx]}
                                     </td>
                                 )
                             )}
