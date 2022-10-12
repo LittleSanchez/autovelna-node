@@ -71,19 +71,27 @@ const convertCompatibilities = (rawCompatibilities) => {
             });
         }
         console.log('Compatibility preview: ', newCompatibility.compatibilityProperties)
-        const newCompatibilitySeparatedByYear = newCompatibility.compatibilityProperties.find(x => x.name === 'year').value.split('\u000b').map((x, i) => ({
-            ...newCompatibility,
-            compatibilityProperties: [
-                ...newCompatibility.compatibilityProperties,
-                {
+        const currentYears = newCompatibility.compatibilityProperties.find(x => x.name === 'year').value.split('\u000b');
+        currentYears.forEach((x, i) => {
+            result.compatibleProducts.push({
+                compatibilityProperties: newCompatibility.compatibilityProperties.map(y => y.name === 'year' ? ({
                     name: 'year',
                     value: x,
-                }
-            ]
-        }))
-        for (const nCSBY of newCompatibilitySeparatedByYear) {
-            result.compatibleProducts.push(nCSBY)
-        }
+                }) : y)
+            }
+            )
+        })
+        // const newCompatibilitySeparatedByYear = .map((x, i) => ({
+        //     ...newCompatibility,
+        //     compatibilityProperties:
+        //         newCompatibility.compatibilityProperties.map(y => y.name === 'year' ? {
+        //             name: 'year',
+        //             value: x
+        //         } : y),
+        // }))
+        // for (const nCSBY of newCompatibilitySeparatedByYear) {
+        //     result.compatibleProducts.push(nCSBY)
+        // }
     }
     return result;
 }
@@ -99,10 +107,15 @@ const generateInventoryItem = async (productRawData, productApidata) => {
             aspects: productRawData?.aspects,
             title: productRawData?.name?.substring(0, 80),
         },
-        condition: 'NEW'//productRawData?.aspects.Condition[0].toUpperCase(),
+        condition: 'NEW',//productRawData?.aspects.Condition[0].toUpperCase(),
         // availability: {
+        //     pickupAtLocationAvailability: [
+        //         { 
+        //             quantity: 3
+        //         }
+        //     ],
         //     shipToLocationAvailability: {
-        //         quantity: 1,
+        //         quantity: 3,
         //     }
         // }
     }
